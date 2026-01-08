@@ -1,0 +1,138 @@
+<template>
+  <article class="blog-card" @click="handleClick">
+    <!-- 封面图（如果有） -->
+    <div v-if="cover" class="blog-card__cover">
+      <img :src="cover" :alt="title" loading="lazy" />
+    </div>
+
+    <!-- 内容区 -->
+    <div class="blog-card__content">
+      <h2 class="blog-card__title">{{ title }}</h2>
+      <p class="blog-card__excerpt">{{ excerpt }}</p>
+
+      <!-- 标签区 -->
+      <div v-if="tags && tags.length" class="blog-card__tags">
+        <span v-for="tag in tags" :key="tag" class="blog-card__tag">
+          #{{ tag }}
+        </span>
+      </div>
+    </div>
+  </article>
+</template>
+
+<script setup>
+defineProps({
+  title: {
+    type: String,
+    required: true
+  },
+  excerpt: {
+    type: String,
+    default: '暂无简介'
+  },
+  cover: {
+    type: String,
+    default: ''
+  },
+  tags: {
+    type: Array,
+    default: () => []
+  },
+  to: {
+    type: [String, Object],
+    default: ''
+  }
+})
+
+</script>
+
+<style lang="scss" scoped>
+.blog-card {
+  // 继承父元素宽度
+  width: 100%;
+  background: #ffffff;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 4px 16px rgba(93, 138, 168, 0.12);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+
+  &:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 6px 20px rgba(93, 138, 168, 0.18);
+  }
+
+  &__cover {
+    width: 100%;
+    // 使用比例来保持横长方形的形状
+    padding-top: 56.25%; // 对应于16:9的比例
+    position: relative;
+    overflow: hidden;
+    background: #f0f0f0;
+
+    img {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transition: transform 0.5s ease;
+
+      .blog-card:hover & {
+        transform: scale(1.03);
+      }
+    }
+  }
+
+  &__content {
+    padding: 1.2rem;
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+  }
+
+  &__title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #5d8aa8;
+    margin: 0 0 0.8rem;
+    line-height: 1.4;
+  }
+
+  &__excerpt {
+    font-size: 0.95rem;
+    color: #6a8ba8;
+    line-height: 1.6;
+    margin: 0 0 1rem;
+    flex: 1;
+  }
+
+  &__tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  &__tag {
+    background-color: rgba(255, 158, 181, 0.15);
+    color: #ff6b9d;
+    font-size: 0.85rem;
+    padding: 0.25rem 0.6rem;
+    border-radius: 20px;
+    font-weight: 600;
+  }
+}
+
+@media (max-width: 480px) {
+  .blog-card {
+    max-width: none;
+
+    &__cover {
+      padding-top: 50%;
+    }
+  }
+}
+</style>
