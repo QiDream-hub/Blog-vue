@@ -1,6 +1,7 @@
 <template>
-    <div>
-        <div style="width: 60%;">
+    <div class="main-layout">
+        <!-- 左侧：搜索 + 博客卡片 -->
+        <div class="content-column">
             <div class="search-container">
                 <input type="text" v-model="searchText" placeholder="搜索标题或摘要..." />
             </div>
@@ -8,9 +9,12 @@
                 <BlogCard v-for="post in filteredPosts" :key="post.id" v-bind="post" class="blog-card" />
             </div>
         </div>
-        <div>
-            <div>
-                <p>ddd</p>
+
+        <!-- 右侧：标签栏 -->
+        <div class="sidebar-column">
+            <div class="tags-container">
+                <TagCard v-for="tag in tags" :key="tag.name" :name="tag.name" :count="tag.count"
+                    @click="addOrDelTag(tag.name)" />
             </div>
         </div>
     </div>
@@ -18,24 +22,51 @@
 
 <script setup>
 import BlogCard from '@/components/BlogCard.vue'
+import TagCard from '@/components/TagCard.vue'
 import { ref, computed } from 'vue'
 
 const searchText = ref('')
+const searchTag = ref([])
 
-// 使用 computed 提高性能：只在 searchText 或 posts 变化时重新计算
-const filteredPosts = computed(() => {
-    const query = searchText.value.trim()
-    if (!query) {
-        return posts // 无搜索词时显示全部
+const addOrDelTag = (name) => {
+    if (!name) return
+    const tagName = name.trim()
+    if (!tagName) return
+
+    const tags = [...searchTag.value]
+    const index = tags.indexOf(tagName)
+    if (index > -1) {
+        tags.splice(index, 1)
+    } else {
+        tags.push(tagName)
     }
+    searchTag.value = [...new Set(tags)]
+}
 
-    const lowerQuery = query.toLowerCase()
+// ✅ 核心：正确实现多条件过滤
+const filteredPosts = computed(() => {
+    const query = searchText.value.trim().toLowerCase()
+    const activeTags = searchTag.value // 当前选中的标签数组
+
     return posts.filter(post => {
-        const title = (post.title || '').toLowerCase()
-        const excerpt = (post.excerpt || '').toLowerCase()
-        return title.includes(lowerQuery) || excerpt.includes(lowerQuery)
+        // 1. 文本搜索（标题 + 摘要）
+        const matchesText = !query ||
+            post.title.toLowerCase().includes(query) ||
+            post.excerpt.toLowerCase().includes(query)
+
+        // 2. 标签筛选：如果没有任何标签被选中，则跳过标签过滤
+        const matchesTag = activeTags.length === 0 ||
+            activeTags.some(tag => post.tags.includes(tag))
+
+        return matchesText && matchesTag
     })
 })
+
+const tags = [
+    { name: "编程语言", count: 1 },
+    { name: "历史", count: 1 },
+    { name: "前端", count: 2 },
+]
 
 const posts = [
     {
@@ -66,8 +97,29 @@ const posts = [
 </script>
 
 <style scoped>
+.main-layout {
+    display: flex;
+    gap: 24px;
+    /* max-width: 1200px; */
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.content-column {
+    flex: 2;
+    /* 占比更大 */
+    min-width: 0;
+    /* 防止 flex 子项溢出 */
+}
+
+.sidebar-column {
+    flex: 1;
+    /* 较窄的侧边栏 */
+    min-width: 200px;
+}
+
 .search-container {
-    width: 100%;
+    width: 90%;
     max-width: 600px;
     margin-bottom: 20px;
 }
@@ -81,12 +133,35 @@ input {
 
 .posts-container {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
     gap: 16px;
 }
 
 .blog-card {
     max-width: 400px;
     box-sizing: border-box;
+}
+
+.tags-container {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+@media (max-width: 768px) {
+  .main-layout {
+    flex-direction: column;
+  }
+
+  /* 手机端：标签栏在上 */
+  .sidebar-column {
+    order: -1; /* 提到最前面 */
+    min-width: auto;
+    margin-bottom: 20px; /* 和下方内容留点间距 */
+  }
+
+  .content-column {
+    width: 100%;
+  }
 }
 </style>
