@@ -1,5 +1,5 @@
 <template>
-  <article class="blog-card" @click="handleClick">
+  <article class="blog-card" @click="handleClick" role="link" tabindex="0">
     <!-- 封面图（如果有） -->
     <div v-if="cover" class="blog-card__cover">
       <img :src="cover" :alt="title" loading="lazy" />
@@ -21,7 +21,9 @@
 </template>
 
 <script setup>
-defineProps({
+import { useRouter } from 'vue-router'
+
+const props = defineProps({
   title: {
     type: String,
     required: true
@@ -44,6 +46,13 @@ defineProps({
   }
 })
 
+const router = useRouter()
+
+const handleClick = () => {
+  if (props.to) {
+    router.push(props.to)
+  }
+}
 </script>
 
 <style lang="scss" scoped>
