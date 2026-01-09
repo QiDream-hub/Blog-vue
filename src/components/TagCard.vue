@@ -1,7 +1,7 @@
 <template>
     <article class="tag-card" role="link" tabindex="0">
         <div class="tag-card__content">
-            <h2 class="tag-card__title">#{{ name }}</h2>
+            <h2 class="tag-card__title">{{ name }}</h2>
             <p v-if="description" class="tag-card__description">{{ description }}</p>
             <div v-if="count !== undefined" class="tag-card__meta">
                 {{ count }} 篇文章
@@ -40,6 +40,7 @@ const props = defineProps({
     display: flex;
     flex-direction: column;
     padding: 1.2rem;
+    user-select: none;
 
     &:hover {
         transform: translateY(-4px);

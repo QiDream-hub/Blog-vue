@@ -13,9 +13,10 @@
         <!-- 右侧：标签栏 -->
         <div class="sidebar-column">
             <div class="tags-container">
-                <TagCard v-for="tag in tags" :key="tag.name" :name="tag.name" :count="tag.count"
-                    @click="addOrDelTag(tag.name)" />
+                <TagCard v-for="tag in tags" :key="tag.name" v-bind="tag" @click="addOrDelTag(tag.name)"
+                    :class="{ 'tag-card--selected': searchTag.includes(tag.name) }" />
             </div>
+            <!-- <TagCard style="width: 50px;" v-bind="tags[0]"/> -->
         </div>
     </div>
 </template>
@@ -29,21 +30,18 @@ const searchText = ref('')
 const searchTag = ref([])
 
 const addOrDelTag = (name) => {
-    if (!name) return
-    const tagName = name.trim()
+    const tagName = name?.trim()
     if (!tagName) return
 
-    const tags = [...searchTag.value]
-    const index = tags.indexOf(tagName)
+    const index = searchTag.value.indexOf(tagName)
     if (index > -1) {
-        tags.splice(index, 1)
+        searchTag.value = searchTag.value.filter(t => t !== tagName)
     } else {
-        tags.push(tagName)
+        searchTag.value = [...searchTag.value, tagName]
     }
-    searchTag.value = [...new Set(tags)]
+    console.log(searchTag.value)
 }
 
-// ✅ 核心：正确实现多条件过滤
 const filteredPosts = computed(() => {
     const query = searchText.value.trim().toLowerCase()
     const activeTags = searchTag.value // 当前选中的标签数组
@@ -91,7 +89,7 @@ const posts = [
         excerpt: '深入理解 Vue 3 的 Composition API 和响应式系统。',
         cover: '/原神-神里凌华-棕色.jpg',
         tags: ['Vue', '前端'],
-        to: '/blogs/vue3-reactivity',
+        to: '/blogs/我的第一篇博客',
     },
 ]
 </script>
@@ -148,20 +146,46 @@ input {
     gap: 12px;
 }
 
+.tag-card--selected {
+    border: 2px solid #ff6b9d;
+    /* 使用标题的颜色作为边框颜色，以增强视觉焦点 */
+    box-shadow: 0 4px 16px rgba(255, 107, 157, 0.3);
+    /* 增加一点阴影效果，使用标题颜色的变体 */
+
+    & .tag-card__title {
+        color: #ffffff;
+        /* 标题变为白色，使其在任何背景上都突出 */
+        background-color: #ff6b9d;
+        /* 背景颜色与标题颜色一致，给标题一个强调 */
+        padding: 0.2rem 0.5rem;
+        /* 给标题一些内边距 */
+        border-radius: 8px;
+        /* 圆角处理 */
+    }
+
+    & .tag-card__description,
+    & .tag-card__meta {
+        color: #ff6b9d;
+        /* 文字颜色调整为标题颜色的变体，保持一致性 */
+    }
+}
+
 @media (max-width: 768px) {
-  .main-layout {
-    flex-direction: column;
-  }
+    .main-layout {
+        flex-direction: column;
+    }
 
-  /* 手机端：标签栏在上 */
-  .sidebar-column {
-    order: -1; /* 提到最前面 */
-    min-width: auto;
-    margin-bottom: 20px; /* 和下方内容留点间距 */
-  }
+    /* 手机端：标签栏在上 */
+    .sidebar-column {
+        order: -1;
+        /* 提到最前面 */
+        min-width: auto;
+        margin-bottom: 20px;
+        /* 和下方内容留点间距 */
+    }
 
-  .content-column {
-    width: 100%;
-  }
+    .content-column {
+        width: 100%;
+    }
 }
 </style>

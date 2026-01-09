@@ -1,14 +1,8 @@
 import About from '@/views/About.vue'
 import Blog from '@/views/Blog.vue'
+import Error from '@/views/Error.vue'
 import Home from '@/views/Home.vue'
 import { createRouter, createWebHistory } from 'vue-router'
-
-const blogs = [
-  {
-    path: "编辑语言介绍",
-    component: Blog
-  }
-]
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -25,10 +19,20 @@ const router = createRouter({
       component: About
     },
     {
-      path: '/blogs/:slug(.*)',
+      path: '/blogs/:slug',
       component: Blog,
       props: true
 
+    },
+    {
+      path: '/error/:slug(.*)*',
+      component: Error,
+      props: true
+    },
+    {
+      path: '/:pathMatch(.*)*',
+      component: Error,
+      props: true
     }
   ],
 })
