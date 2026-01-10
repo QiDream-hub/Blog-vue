@@ -39,7 +39,7 @@ const addOrDelTag = (name) => {
     } else {
         searchTag.value = [...searchTag.value, tagName]
     }
-    console.log(searchTag.value)
+    // console.log(searchTag.value)
 }
 
 const filteredPosts = computed(() => {

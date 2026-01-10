@@ -25,12 +25,12 @@ const router = createRouter({
 
     },
     {
-      path: '/error/:slug(.*)*',
+      path: '/error/:slug(.*)',
       component: Error,
       props: true
     },
     {
-      path: '/:pathMatch(.*)*',
+      path: '/:slug(.*)',
       component: Error,
       props: true
     }

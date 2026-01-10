@@ -35,7 +35,7 @@ console.log('Hello, pink-blue-white theme!')
 const props = defineProps({
   slug: {
     type: String,
-    default: "我的第一篇博客"
+    default: ""
   }
 })
 
