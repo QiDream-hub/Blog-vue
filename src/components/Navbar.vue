@@ -27,7 +27,7 @@ const routes = router.options.routes.filter(
 
 .nav-link {
     text-decoration: none;
-    color: #5d8aa8; // 柔和蓝
+    color: var(--secondary-color, #5d8aa8);
     font-weight: 600;
     padding: 0.5rem 1rem;
     border-radius: 20px;
@@ -42,13 +42,13 @@ const routes = router.options.routes.filter(
         left: 50%;
         width: 0;
         height: 2px;
-        background-color: #ff9eb5; // 粉色高亮
+        background-color: var(--primary-color, #ff9eb5);
         transition: all 0.3s ease;
         transform: translateX(-50%);
     }
 
     &:hover {
-        color: #ff6b9d; // 粉红
+        color: var(--selected-color, #ff6b9d);
 
         &::after {
             width: 80%;
@@ -57,12 +57,12 @@ const routes = router.options.routes.filter(
 }
 
 .nav-link--active {
-    color: #ff6b9d !important;
-    background-color: rgba(255, 158, 181, 0.1); // 淡粉背景
+    color: var(--selected-color, #ff6b9d) !important;
+    background-color: var(--selected-bg-color, rgba(255, 158, 181, 0.1)) !important;
 
     &::after {
         width: 100% !important;
-        background-color: #ff6b9d;
+        background-color: var(--selected-color, #ff6b9d);
     }
 }
 </style>

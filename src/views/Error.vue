@@ -36,8 +36,7 @@ const error = computed(() => {
 
 <style lang="scss" scoped>
 .error-page {
-    background-color: #ffffff;
-    // 不再使用 flex 居中，改用自然流式布局
+    background-color: var(--bg-color, #ffffff);
     padding: 1.5rem 1rem 2rem; // 上 1.5rem，下 2rem（略多一点避免贴底）
     min-height: calc(100vh - 80px); // 减去 header 高度
 
@@ -47,30 +46,30 @@ const error = computed(() => {
         margin: 0 auto; // 水平居中
 
         .card {
-            background: #fff;
+            background: var(--bg-color, #fff);
             padding: 2rem;
             border-radius: 12px;
-            box-shadow: 0 4px 20px rgba(93, 138, 168, 0.1);
+            box-shadow: 0 4px 20px rgba(93, 138, 168, 0.1); // 保持原始值，但基于 --secondary-color 的透明版本
             text-align: center;
             line-height: 1.6;
-            color: #333;
+            color: var(--text-color, #333);
 
             .title {
-                color: #5d8aa8;
+                color: var(--secondary-color, #5d8aa8);
                 font-size: 2rem;
                 margin-bottom: 1rem;
                 font-weight: 700;
             }
 
             .message {
-                color: #666;
+                color: var(--meta-color, #666); // 使用 --meta-color 更合适
                 margin-bottom: 1.5rem;
                 font-size: 1.1rem;
             }
 
             .back-link {
                 display: inline-block;
-                color: #ff6b9d;
+                color: var(--primary-color, #ff7aae); // 强调色使用 --primary-color
                 text-decoration: none;
                 font-weight: 600;
                 padding: 0.5rem 1rem;
@@ -78,8 +77,8 @@ const error = computed(() => {
                 transition: all 0.2s ease;
 
                 &:hover {
-                    color: #5d8aa8;
-                    background-color: #f8f9fa;
+                    color: var(--secondary-color, #5d8aa8); // hover 状态使用 --secondary-color
+                    background-color: var(--selected-bg-color, rgba(255, 158, 181, 0.1)); // 背景高亮使用 --selected-bg-color
                     text-decoration: none;
                 }
             }

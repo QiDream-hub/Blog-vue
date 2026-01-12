@@ -12,9 +12,9 @@
 
         <h2>🎨 设计理念</h2>
         <p>
-          界面采用清爽的 <strong>粉蓝白配色</strong>：  
-          - 主色调 <code>#5d8aa8</code>（宁静蓝）用于标题与链接；  
-          - 强调色 <code>#ff6b9d</code>（活力粉）用于交互与高亮；  
+          界面采用清爽的 <strong>粉蓝白配色</strong>：
+          - 主色调 <code>#5d8aa8</code>（宁静蓝）用于标题与链接；
+          - 强调色 <code>#ff7aae</code>（活力粉）用于交互与高亮;
           - 背景与卡片保持纯白，确保阅读舒适。
         </p>
 
@@ -49,7 +49,7 @@
 
 <style lang="scss" scoped>
 .about-page {
-  background-color: #ffffff;
+  background-color: var(--bg-color, #ffffff);
   min-height: calc(100vh - 80px); // 减去 header 高度估算
   padding: 2rem 1rem;
 
@@ -59,22 +59,23 @@
 
     .title {
       text-align: center;
-      color: #5d8aa8;
+      color: var(--secondary-color, #5d8aa8);
       font-size: 2.2rem;
       margin-bottom: 2rem;
       font-weight: 700;
     }
 
     .card {
-      background: #fff;
+      background: var(--bg-color, #fff);
       padding: 2rem;
       border-radius: 12px;
+      /* 阴影基于 --secondary-color，fallback 为 rgba(93,138,168,0.1) */
       box-shadow: 0 4px 20px rgba(93, 138, 168, 0.1);
       line-height: 1.7;
-      color: #333;
+      color: var(--text-color, #333);
 
       h2 {
-        color: #5d8aa8;
+        color: var(--secondary-color, #5d8aa8);
         margin-top: 1.5rem;
         margin-bottom: 0.8rem;
         font-size: 1.4rem;
@@ -82,13 +83,17 @@
 
       p {
         margin-bottom: 1rem;
+        color: var(--text-color, #333);
+        /* 显式声明，避免继承问题 */
       }
 
       code {
+        /* 未来可考虑定义 --code-bg-color，当前保留浅蓝背景 */
         background: #f0f8ff;
+        /* AliceBlue，接近 --secondary-color 的极淡版 */
         padding: 0.2em 0.4em;
         border-radius: 4px;
-        color: #5d8aa8;
+        color: var(--secondary-color, #5d8aa8);
         font-family: monospace;
       }
 
@@ -98,6 +103,7 @@
 
         li {
           margin-bottom: 0.5rem;
+          color: var(--text-color, #333);
         }
       }
 
@@ -107,13 +113,15 @@
         margin: 1rem 0;
 
         a {
-          color: #ff6b9d;
+          color: var(--primary-color, #ff7aae);
+          /* ✅ 使用主强调色 */
           text-decoration: none;
           font-weight: 600;
           transition: color 0.2s ease;
 
           &:hover {
-            color: #5d8aa8;
+            color: var(--secondary-color, #5d8aa8);
+            /* 与 Footer 一致 */
             text-decoration: underline;
           }
         }
@@ -122,7 +130,8 @@
       .footer-note {
         margin-top: 2rem;
         text-align: center;
-        color: #777;
+        color: var(--meta-color, #999);
+        /* ✅ 元信息用 --meta-color */
         font-style: italic;
       }
     }

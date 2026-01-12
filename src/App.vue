@@ -17,7 +17,6 @@
 </template>
 
 <style lang="scss">
-// 全局或 scoped 都可，建议用 scoped + deep 或全局样式
 .app-layout {
   min-height: 100vh; // 至少占满整个视口高度
   display: flex;
@@ -28,6 +27,6 @@
 .main-content {
   flex: 1; // 关键！让 main 占据剩余所有空间
   padding: 2rem;
-  background-color: #fafafa;
+  background-color: var(--bg-color, #fafafa);
 }
 </style>

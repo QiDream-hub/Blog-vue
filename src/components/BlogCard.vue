@@ -57,9 +57,8 @@ const handleClick = () => {
 
 <style lang="scss" scoped>
 .blog-card {
-  // 继承父元素宽度
   width: 100%;
-  background: #ffffff;
+  background: var(--bg-color, #ffffff);
   border-radius: 16px;
   overflow: hidden;
   box-shadow: 0 4px 16px rgba(93, 138, 168, 0.12);
@@ -75,11 +74,10 @@ const handleClick = () => {
 
   &__cover {
     width: 100%;
-    // 使用比例来保持横长方形的形状
     padding-top: 56.25%; // 对应于16:9的比例
     position: relative;
     overflow: hidden;
-    background: #f0f0f0;
+    background: var(--bg-color, #ffffff);
 
     img {
       position: absolute;
@@ -106,14 +104,14 @@ const handleClick = () => {
   &__title {
     font-size: 1.25rem;
     font-weight: 700;
-    color: #5d8aa8;
+    color: var(--secondary-color, #5d8aa8);
     margin: 0 0 0.8rem;
     line-height: 1.4;
   }
 
   &__excerpt {
     font-size: 0.95rem;
-    color: #6a8ba8;
+    color: var(--description-color, #6a8ba8);
     line-height: 1.6;
     margin: 0 0 1rem;
     flex: 1;
@@ -126,8 +124,8 @@ const handleClick = () => {
   }
 
   &__tag {
-    background-color: rgba(255, 158, 181, 0.15);
-    color: #ff6b9d;
+    background-color: var(--tag-bg-color, rgba(255, 158, 181, 0.15));
+    color: var(--tag-text-color, #ff6b9d);
     font-size: 0.85rem;
     padding: 0.25rem 0.6rem;
     border-radius: 20px;

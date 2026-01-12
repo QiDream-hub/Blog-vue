@@ -86,11 +86,11 @@ watch(() => props.content, addCopyButtons, { immediate: true })
     margin: 2rem auto;
     padding: 0 1.5rem;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    color: #333;
+    color: var(--text-color, #333);
 }
 
 .blog-title {
-    color: #5a8bc2;
+    color: var(--secondary-color, #5d8aa8);
     font-size: 2.2rem;
     font-weight: 700;
     text-align: center;
@@ -107,8 +107,8 @@ watch(() => props.content, addCopyButtons, { immediate: true })
 }
 
 .tag {
-    background-color: rgba(255, 170, 190, 0.12);
-    color: #ff7aae;
+    background-color: var(--tag-bg-color, rgba(255, 170, 190, 0.12));
+    color: var(--tag-text-color, #ff7aae);
     padding: 0.35rem 0.8rem;
     border-radius: 20px;
     font-size: 0.9rem;
@@ -124,7 +124,7 @@ watch(() => props.content, addCopyButtons, { immediate: true })
 
 /* Markdown 内容区域 —— 复用你原来的样式 */
 :deep(.markdown-content) {
-    color: #333;
+    color: var(--text-color, #333);
     line-height: 1.7;
     font-size: 1.05rem;
 
@@ -142,7 +142,7 @@ watch(() => props.content, addCopyButtons, { immediate: true })
             position: absolute;
             top: 10px;
             right: 10px;
-            background: #ff7aae;
+            background: var(--primary-color, #ff7aae);
             color: white;
             border: none;
             border-radius: 4px;
@@ -154,8 +154,7 @@ watch(() => props.content, addCopyButtons, { immediate: true })
         }
 
         .copy-code-button:hover {
-            background: #ff5c9d;
-            /* darken(#ff7aae, 10%) 手动计算 */
+            background: var(--selected-color, #ff5c9d);
             box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
         }
     }
@@ -166,7 +165,7 @@ watch(() => props.content, addCopyButtons, { immediate: true })
     h4,
     h5,
     h6 {
-        color: #5a8bc2;
+        color: var(--secondary-color, #5d8aa8);
         margin-top: 1.6em;
         margin-bottom: 0.8em;
         font-weight: 600;
@@ -180,34 +179,34 @@ watch(() => props.content, addCopyButtons, { immediate: true })
 
     h2 {
         font-size: 1.5rem;
-        border-left: 4px solid #5a8bc2;
+        border-left: 4px solid var(--secondary-color, #5d8aa8);
         padding-left: 0.6em;
     }
 
     a {
-        color: #ff7aae;
+        color: var(--primary-color, #ff7aae);
         text-decoration: none;
         font-weight: 600;
 
         &:hover {
             text-decoration: underline;
-            color: #ff5c9d;
+            color: var(--selected-color, #ff5c9d);
         }
     }
 
     blockquote {
-        border-left: 4px solid #ff9ec2;
+        border-left: 4px solid var(--primary-color, #ff7aae);
         background-color: rgba(255, 170, 190, 0.06);
         padding: 0.9rem 1.2rem;
         margin: 1.4rem 0;
-        color: #555;
+        color: var(--description-color, #555);
         font-style: italic;
         border-radius: 0 6px 6px 0;
     }
 
     code {
         background-color: rgba(90, 139, 194, 0.08);
-        color: #4a7ab2;
+        color: var(--secondary-color, #5d8aa8);
         padding: 0.2em 0.4em;
         border-radius: 4px;
         font-family: 'SFMono-Regular', Consolas, monospace;
@@ -232,7 +231,7 @@ watch(() => props.content, addCopyButtons, { immediate: true })
 
     th {
         background-color: rgba(90, 139, 194, 0.08);
-        color: #5a8bc2;
+        color: var(--secondary-color, #5d8aa8);
         font-weight: 600;
     }
 

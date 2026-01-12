@@ -13,7 +13,7 @@ import Navbar from './Navbar.vue'
 
 <style lang="scss" scoped>
 .app-header {
-  background-color: #ffffff;
+  background-color: var(--bg-color, #ffffff);
   padding: 0.8rem 2rem;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
   display: flex;
@@ -32,12 +32,12 @@ import Navbar from './Navbar.vue'
 .logo {
   font-size: 1.4rem;
   font-weight: 700;
-  color: #5d8aa8;
+  color: var(--secondary-color, #5d8aa8);
   cursor: pointer;
   transition: color 0.2s ease;
 
   &:hover {
-    color: #ff6b9d;
+    color: var(--selected-color, #ff5c9d);
   }
 }
 </style>

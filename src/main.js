@@ -6,7 +6,7 @@ import Hader from './components/Header.vue'
 import Navbar from './components/Navbar.vue'
 import BlogCard from './components/BlogCard.vue'
 import BlogPostView from './components/BlogPostView.vue'
-
+import './styles/variables.css'
 import 'highlight.js/styles/github.css'
 import TagCard from './components/TagCard.vue'
 
