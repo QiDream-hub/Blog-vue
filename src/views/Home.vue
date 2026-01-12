@@ -119,6 +119,8 @@ input {
     padding: 8px 12px;
     border: 1px solid var(--border-color, rgba(93, 138, 168, 0.15));
     border-radius: 4px;
+    background-color: var(--bg-color, #ffffff);
+    color: var(--text-color, #333333);
 }
 
 .posts-container {

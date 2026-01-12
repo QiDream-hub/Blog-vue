@@ -1,4 +1,4 @@
-:root-duck {
+:root {
   /* 主强调色：用于按钮、标签标题、高亮元素等主要交互或视觉焦点 */
   --primary-color: #ff7aae;
 
@@ -29,7 +29,7 @@
   /* 标签文本颜色 */
   --tag-text-color: var(--primary-color, #ff6b9d); 
 }
-:root {
+:root-dark {
   /* 主强调色：用于按钮、标签标题、高亮元素等主要交互或视觉焦点 */
   --primary-color: #ff95c4; /* 较亮的粉色，确保在暗背景下足够醒目 */
 

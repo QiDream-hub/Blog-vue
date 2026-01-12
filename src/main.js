@@ -9,6 +9,7 @@ import BlogPostView from './components/BlogPostView.vue'
 import './styles/variables.css'
 import 'highlight.js/styles/github.css'
 import TagCard from './components/TagCard.vue'
+import ThemeToggle from './components/ThemeToggle.vue'
 
 const app = createApp(App)
 
@@ -20,5 +21,6 @@ app.component("BlogPostView", BlogPostView)
 
 app.component("BlogCard", BlogCard)
 app.component("TagCrad",TagCard)
+app.component("ThemeToggle",ThemeToggle)
 
 app.mount('#app')
