@@ -23,6 +23,7 @@ const routes = router.options.routes.filter(
     align-items: center;
     justify-content: center;
     flex-wrap: wrap;
+    transition: var(--transition-bg-color);
 }
 
 .nav-link {

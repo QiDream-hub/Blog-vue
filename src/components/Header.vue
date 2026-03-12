@@ -39,7 +39,7 @@ import ThemeToggle from './ThemeToggle.vue';
   position: sticky;
   top: 0;
   z-index: 1000;
-  transition: background-color 0.3s ease;
+  transition: var(--transition-bg-color);
 
   // 小屏：垂直堆叠
   @media (max-width: 768px) {

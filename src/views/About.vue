@@ -50,6 +50,7 @@
 <style lang="scss" scoped>
 .about-page {
   background-color: var(--bg-color, #ffffff);
+  transition: var(--transition-bg-color);
   min-height: calc(100vh - 80px); // 减去 header 高度估算
   padding: 2rem 1rem;
 
@@ -67,6 +68,7 @@
 
     .card {
       background: var(--bg-color, #fff);
+      transition: var(--transition-bg-color);
       padding: 2rem;
       border-radius: 12px;
       /* 阴影基于 --secondary-color，fallback 为 rgba(93,138,168,0.1) */
@@ -88,9 +90,8 @@
       }
 
       code {
-        /* 未来可考虑定义 --code-bg-color，当前保留浅蓝背景 */
-        background: #f0f8ff;
-        /* AliceBlue，接近 --secondary-color 的极淡版 */
+        background: var(--bg-color, #fff);
+        transition: var(--transition-bg-color);
         padding: 0.2em 0.4em;
         border-radius: 4px;
         color: var(--secondary-color, #5d8aa8);

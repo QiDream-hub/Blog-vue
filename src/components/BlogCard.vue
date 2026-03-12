@@ -66,6 +66,7 @@ const handleClick = () => {
   cursor: pointer;
   display: flex;
   flex-direction: column;
+  transition: var(--transition-bg-color);
 
   &:hover {
     transform: translateY(-4px);

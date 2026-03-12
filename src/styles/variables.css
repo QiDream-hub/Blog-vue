@@ -21,11 +21,19 @@
   --meta-color: #999;
 
   /* 描述文本颜色 */
-  --description-color: #6a8ba8; 
+  --description-color: #6a8ba8;
 
   /* 标签背景色 */
-  --tag-bg-color: rgba(255, 158, 181, 0.15); 
+  --tag-bg-color: rgba(255, 158, 181, 0.15);
 
   /* 标签文本颜色 */
-  --tag-text-color: var(--primary-color, #ff6b9d); 
+  --tag-text-color: var(--primary-color, #ff6b9d);
+
+  /* 背景颜色动画过度 */
+  --transition-bg-color: background-color 0.3s ease;
+
+  /* --- 动画变量 (新增) --- */
+  --anim-duration: 0.3s; /* 动画持续时间 */
+  --anim-easing: cubic-bezier(0.25, 0.8, 0.25, 1); /* 缓动函数 */
+  --anim-translate-y: 20px; /* 进入/离开时的位移距离 */
 }

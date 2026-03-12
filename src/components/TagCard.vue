@@ -43,6 +43,7 @@ const props = defineProps({
     flex-direction: column;
     padding: 1.2rem;
     user-select: none;
+    transition: var(--transition-bg-color);
 
     &:hover {
         transform: translateY(-4px);

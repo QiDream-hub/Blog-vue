@@ -75,7 +75,7 @@ watch(isDark, (newVal) => {
     display: flex;
     align-items: center;
     gap: 0.4rem;
-    transition: all 0.25s ease;
+    transition: var(--transition-bg-color);
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
 
     &:hover {

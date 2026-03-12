@@ -52,6 +52,7 @@ const navRoutes = router.options.routes.filter(
     /* 边框色：基于 --secondary-color 的透明版本 */
     border-top: 1px solid rgba(93, 138, 168, 0.15);
     /* fallback for older browsers */
+    transition: var(--transition-bg-color);
 
     .footer-content {
         display: flex;

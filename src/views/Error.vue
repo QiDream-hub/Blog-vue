@@ -37,6 +37,7 @@ const error = computed(() => {
 <style lang="scss" scoped>
 .error-page {
     background-color: var(--bg-color, #ffffff);
+    transition: var(--transition-bg-color);
     padding: 1.5rem 1rem 2rem; // 上 1.5rem，下 2rem（略多一点避免贴底）
     min-height: calc(100vh - 80px); // 减去 header 高度
 
@@ -47,6 +48,7 @@ const error = computed(() => {
 
         .card {
             background: var(--bg-color, #fff);
+            transition: var(--transition-bg-color);
             padding: 2rem;
             border-radius: 12px;
             box-shadow: 0 4px 20px rgba(93, 138, 168, 0.1); // 保持原始值，但基于 --secondary-color 的透明版本

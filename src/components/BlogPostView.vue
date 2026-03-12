@@ -87,6 +87,7 @@ watch(() => props.content, addCopyButtons, { immediate: true })
     padding: 0 1.5rem;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     color: var(--text-color, #333);
+    transition: var(--transition-bg-color);
 }
 
 .blog-title {
