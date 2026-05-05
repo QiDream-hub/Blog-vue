@@ -45,12 +45,12 @@ const navRoutes = router.options.routes.filter(
 
 <style lang="scss" scoped>
 .app-footer {
-    background-color: var(--bg-color, #ffffff);
-    color: var(--secondary-color, #5d8aa8);
+    background-color: var(--bg-color);
+    color: var(--secondary-color);
     /* ✅ 替换硬编码 */
     padding: 2.5rem 2rem 1.5rem;
     /* 边框色：基于 --secondary-color 的透明版本 */
-    border-top: 1px solid rgba(93, 138, 168, 0.15);
+    border-top: 1px solid var(--border-color);
     /* fallback for older browsers */
     transition: var(--transition-bg-color);
 
@@ -70,7 +70,7 @@ const navRoutes = router.options.routes.filter(
         h4 {
             font-size: 1.1rem;
             margin-bottom: 1rem;
-            color: var(--secondary-color, #5d8aa8);
+            color: var(--secondary-color);
         }
 
         ul {
@@ -85,18 +85,18 @@ const navRoutes = router.options.routes.filter(
 
         a {
             text-decoration: none;
-            color: var(--secondary-color, #5d8aa8);
+            color: var(--secondary-color);
             transition: color 0.2s ease;
 
             &:hover {
-                color: var(--primary-color, #ff7aae);
+                color: var(--primary-color);
             }
         }
 
         p {
             margin: 0.4rem 0;
             line-height: 1.5;
-            color: var(--secondary-color, #5d8aa8);
+            color: var(--secondary-color);
             /* 显式声明，确保继承一致 */
         }
     }
@@ -105,18 +105,18 @@ const navRoutes = router.options.routes.filter(
         font-size: 1.4rem;
         font-weight: 700;
         margin-bottom: 0.6rem;
-        color: var(--secondary-color, #5d8aa8);
+        color: var(--secondary-color);
         cursor: pointer;
         display: inline-block;
 
         &:hover {
-            color: var(--primary-color, #ff7aae);
+            color: var(--primary-color);
         }
     }
 
     .footer-desc {
         font-size: 0.95rem;
-        color: var(--secondary-color, #5d8aa8);
+        color: var(--secondary-color);
     }
 
     .footer-bottom {
@@ -124,9 +124,9 @@ const navRoutes = router.options.routes.filter(
         margin-top: 2rem;
         padding-top: 1.2rem;
         /* 同样使用 secondary-color 的透明边框 */
-        border-top: 1px solid rgba(93, 138, 168, 0.1);
+        border-top: 1px solid var(--border-light-color);
         /* 使用 --meta-color 更符合“版权信息”语义 */
-        color: var(--meta-color, #999);
+        color: var(--meta-color);
         font-size: 0.9rem;
 
         p {
@@ -134,7 +134,7 @@ const navRoutes = router.options.routes.filter(
         }
 
         .footer-copyright-extra {
-            color: var(--primary-color, #ff7aae);
+            color: var(--primary-color);
             font-style: italic;
         }
     }

@@ -9,6 +9,7 @@ import BlogPostView from './components/BlogPostView.vue'
 import 'highlight.js/styles/github.css'
 import TagCard from './components/TagCard.vue'
 import ThemeToggle from './components/ThemeToggle.vue'
+import './styles/variables.css'
 
 const app = createApp(App)
 

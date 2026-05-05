@@ -8,10 +8,9 @@
       </div>
     </div>
 
-    <!-- 中间：功能区（当前放主题切换，未来可扩展） -->
+    <!-- 中间：功能区（主题切换） -->
     <div class="header-center">
-      <ThemeToggle :themes="{ light: lightTheme, dark: darkTheme }" />
-      <!-- 未来可在此添加：<SearchBar />, <LangSwitcher />, etc. -->
+      <ThemeToggle />
     </div>
 
     <!-- 右侧：导航路由 -->
@@ -22,7 +21,6 @@
 </template>
 
 <script setup>
-import { darkTheme, lightTheme } from '@/styles/themes';
 import Navbar from './Navbar.vue';
 import ThemeToggle from './ThemeToggle.vue';
 </script>
@@ -31,7 +29,7 @@ import ThemeToggle from './ThemeToggle.vue';
 .app-header {
   background-color: var(--bg-color);
   padding: 1rem 2rem;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+  box-shadow: var(--shadow-sm);
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -39,7 +37,6 @@ import ThemeToggle from './ThemeToggle.vue';
   position: sticky;
   top: 0;
   z-index: 1000;
-  transition: var(--transition-bg-color);
 
   // 小屏：垂直堆叠
   @media (max-width: 768px) {

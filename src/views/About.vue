@@ -49,7 +49,7 @@
 
 <style lang="scss" scoped>
 .about-page {
-  background-color: var(--bg-color, #ffffff);
+  background-color: var(--bg-color);
   transition: var(--transition-bg-color);
   min-height: calc(100vh - 80px); // 减去 header 高度估算
   padding: 2rem 1rem;
@@ -60,24 +60,24 @@
 
     .title {
       text-align: center;
-      color: var(--secondary-color, #5d8aa8);
+      color: var(--secondary-color);
       font-size: 2.2rem;
       margin-bottom: 2rem;
       font-weight: 700;
     }
 
     .card {
-      background: var(--bg-color, #fff);
+      background: var(--bg-secondary-color);
       transition: var(--transition-bg-color);
       padding: 2rem;
       border-radius: 12px;
       /* 阴影基于 --secondary-color，fallback 为 rgba(93,138,168,0.1) */
-      box-shadow: 0 4px 20px rgba(93, 138, 168, 0.1);
+      box-shadow: var(--shadow-md);
       line-height: 1.7;
-      color: var(--text-color, #333);
+      color: var(--text-color);
 
       h2 {
-        color: var(--secondary-color, #5d8aa8);
+        color: var(--secondary-color);
         margin-top: 1.5rem;
         margin-bottom: 0.8rem;
         font-size: 1.4rem;
@@ -85,16 +85,16 @@
 
       p {
         margin-bottom: 1rem;
-        color: var(--text-color, #333);
+        color: var(--text-color);
         /* 显式声明，避免继承问题 */
       }
 
       code {
-        background: var(--bg-color, #fff);
+        background: var(--bg-secondary-color);
         transition: var(--transition-bg-color);
         padding: 0.2em 0.4em;
         border-radius: 4px;
-        color: var(--secondary-color, #5d8aa8);
+        color: var(--secondary-color);
         font-family: monospace;
       }
 
@@ -104,7 +104,7 @@
 
         li {
           margin-bottom: 0.5rem;
-          color: var(--text-color, #333);
+          color: var(--text-color);
         }
       }
 
@@ -114,14 +114,14 @@
         margin: 1rem 0;
 
         a {
-          color: var(--primary-color, #ff7aae);
+          color: var(--primary-color);
           /* ✅ 使用主强调色 */
           text-decoration: none;
           font-weight: 600;
           transition: color 0.2s ease;
 
           &:hover {
-            color: var(--secondary-color, #5d8aa8);
+            color: var(--secondary-color);
             /* 与 Footer 一致 */
             text-decoration: underline;
           }
@@ -131,7 +131,7 @@
       .footer-note {
         margin-top: 2rem;
         text-align: center;
-        color: var(--meta-color, #999);
+        color: var(--meta-color);
         /* ✅ 元信息用 --meta-color */
         font-style: italic;
       }

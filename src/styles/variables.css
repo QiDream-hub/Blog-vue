@@ -1,39 +1,188 @@
-:root {
+/* ========================================
+   主题变量系统
+   使用 data-theme 属性切换主题
+   ======================================== */
+
+/* ========================================
+   主题 1: 默认浅色主题 (Sakura / 樱花粉)
+   ======================================== */
+:root,
+[data-theme="sakura"] {
+  /* --- 核心配色 --- */
   /* 主强调色：用于按钮、标签标题、高亮元素等主要交互或视觉焦点 */
   --primary-color: #ff7aae;
-
   /* 辅助/次要色：用于描述文本、边框、图标、阴影基色等次要信息 */
   --secondary-color: #5d8aa8;
-
   /* 页面背景色：用于整体页面或卡片容器的背景 */
   --bg-color: #ffffff;
-
+  /* 次级背景色：用于卡片、侧边栏等次级容器 */
+  --bg-secondary-color: #fafafa;
   /* 主文本颜色：用于正文、标题等主要文字内容 */
   --text-color: #333333;
+  /* 次级文本颜色：用于描述性文字 */
+  --text-secondary-color: #555555;
 
+  /* --- 状态色 --- */
   /* 选中/激活状态色：用于当前选中项、导航激活态、悬停强调色等 */
   --selected-color: #ff5c9d;
-
   /* 选中项背景色：用于激活状态下的淡色背景（如导航项、标签等） */
   --selected-bg-color: rgba(255, 158, 181, 0.1);
+  /* 悬停背景色：用于鼠标悬停状态 */
+  --hover-bg-color: rgba(255, 158, 181, 0.08);
 
+  /* --- 功能色 --- */
   /* 元信息文本色：用于时间、数量、标签计数等辅助性小字信息 */
-  --meta-color: #999;
-
+  --meta-color: #999999;
   /* 描述文本颜色 */
   --description-color: #6a8ba8;
-
+  /* 边框颜色 */
+  --border-color: rgba(93, 138, 168, 0.15);
+  /* 边框浅色：用于分隔线等 */
+  --border-light-color: rgba(93, 138, 168, 0.1);
   /* 标签背景色 */
   --tag-bg-color: rgba(255, 158, 181, 0.15);
-
   /* 标签文本颜色 */
-  --tag-text-color: var(--primary-color, #ff6b9d);
+  --tag-text-color: var(--primary-color);
 
-  /* 背景颜色动画过度 */
+  /* --- 阴影 --- */
+  --shadow-sm: 0 1px 3px rgba(93, 138, 168, 0.08);
+  --shadow-md: 0 4px 12px rgba(93, 138, 168, 0.12);
+  --shadow-lg: 0 6px 20px rgba(93, 138, 168, 0.18);
+  --shadow-primary: 0 4px 16px rgba(255, 122, 174, 0.3);
+
+  /* --- 动画变量 --- */
+  --anim-duration: 0.3s;
+  --anim-easing: cubic-bezier(0.25, 0.8, 0.25, 1);
+  --anim-translate-y: 20px;
+  /* 背景颜色动画过渡 */
   --transition-bg-color: background-color 0.3s ease;
+  /* 通用过渡 */
+  --transition-base: all 0.3s ease;
+  /* 阴影过渡 */
+  --transition-shadow: box-shadow 0.3s ease;
+  /* 变换过渡 */
+  --transition-transform: transform 0.3s ease;
+}
 
-  /* --- 动画变量 (新增) --- */
-  --anim-duration: 0.3s; /* 动画持续时间 */
-  --anim-easing: cubic-bezier(0.25, 0.8, 0.25, 1); /* 缓动函数 */
-  --anim-translate-y: 20px; /* 进入/离开时的位移距离 */
+/* ========================================
+   主题 2: 深色主题 (Midnight / 午夜蓝)
+   ======================================== */
+[data-theme="midnight"] {
+  /* --- 核心配色 --- */
+  --primary-color: #ff8fb8;
+  --secondary-color: #7ab8e8;
+  --bg-color: #1a1a2e;
+  --bg-secondary-color: #16213e;
+  --text-color: #e8e8e8;
+  --text-secondary-color: #c0c0c0;
+
+  /* --- 状态色 --- */
+  --selected-color: #ff6b9d;
+  --selected-bg-color: rgba(255, 143, 184, 0.15);
+  --hover-bg-color: rgba(255, 143, 184, 0.1);
+
+  /* --- 功能色 --- */
+  --meta-color: #888888;
+  --description-color: #7ab8e8;
+  --border-color: rgba(122, 184, 232, 0.2);
+  --border-light-color: rgba(122, 184, 232, 0.1);
+  --tag-bg-color: rgba(255, 143, 184, 0.2);
+  --tag-text-color: var(--primary-color);
+
+  /* --- 阴影 --- */
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.2);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 6px 20px rgba(0, 0, 0, 0.4);
+  --shadow-primary: 0 4px 16px rgba(255, 143, 184, 0.25);
+
+  /* --- 动画变量 (同默认主题) --- */
+  --anim-duration: 0.3s;
+  --anim-easing: cubic-bezier(0.25, 0.8, 0.25, 1);
+  --anim-translate-y: 20px;
+  --transition-bg-color: background-color 0.3s ease;
+  --transition-base: all 0.3s ease;
+  --transition-shadow: box-shadow 0.3s ease;
+  --transition-transform: transform 0.3s ease;
+}
+
+/* ========================================
+   主题 3: 护眼主题 (Forest / 森林绿)
+   ======================================== */
+[data-theme="forest"] {
+  /* --- 核心配色 --- */
+  --primary-color: #5cb87a;
+  --secondary-color: #8fb85d;
+  --bg-color: #f5f7f3;
+  --bg-secondary-color: #ffffff;
+  --text-color: #2d3a2f;
+  --text-secondary-color: #4a5a4d;
+
+  /* --- 状态色 --- */
+  --selected-color: #4a9d6a;
+  --selected-bg-color: rgba(92, 184, 122, 0.12);
+  --hover-bg-color: rgba(92, 184, 122, 0.08);
+
+  /* --- 功能色 --- */
+  --meta-color: #889988;
+  --description-color: #6a8b5d;
+  --border-color: rgba(143, 184, 93, 0.2);
+  --border-light-color: rgba(143, 184, 93, 0.1);
+  --tag-bg-color: rgba(92, 184, 122, 0.15);
+  --tag-text-color: var(--primary-color);
+
+  /* --- 阴影 --- */
+  --shadow-sm: 0 1px 3px rgba(143, 184, 93, 0.08);
+  --shadow-md: 0 4px 12px rgba(143, 184, 93, 0.12);
+  --shadow-lg: 0 6px 20px rgba(143, 184, 93, 0.18);
+  --shadow-primary: 0 4px 16px rgba(92, 184, 122, 0.25);
+
+  /* --- 动画变量 (同默认主题) --- */
+  --anim-duration: 0.3s;
+  --anim-easing: cubic-bezier(0.25, 0.8, 0.25, 1);
+  --anim-translate-y: 20px;
+  --transition-bg-color: background-color 0.3s ease;
+  --transition-base: all 0.3s ease;
+  --transition-shadow: box-shadow 0.3s ease;
+  --transition-transform: transform 0.3s ease;
+}
+
+/* ========================================
+   主题 4: 暖色主题 (Sunset / 落日橙)
+   ======================================== */
+[data-theme="sunset"] {
+  /* --- 核心配色 --- */
+  --primary-color: #ff8a5c;
+  --secondary-color: #e8b87a;
+  --bg-color: #fffbf7;
+  --bg-secondary-color: #fff9f2;
+  --text-color: #3d2a1f;
+  --text-secondary-color: #5a4a3f;
+
+  /* --- 状态色 --- */
+  --selected-color: #ff6b3d;
+  --selected-bg-color: rgba(255, 138, 92, 0.12);
+  --hover-bg-color: rgba(255, 138, 92, 0.08);
+
+  /* --- 功能色 --- */
+  --meta-color: #998877;
+  --description-color: #c9985a;
+  --border-color: rgba(232, 184, 122, 0.2);
+  --border-light-color: rgba(232, 184, 122, 0.1);
+  --tag-bg-color: rgba(255, 138, 92, 0.15);
+  --tag-text-color: var(--primary-color);
+
+  /* --- 阴影 --- */
+  --shadow-sm: 0 1px 3px rgba(232, 184, 122, 0.08);
+  --shadow-md: 0 4px 12px rgba(232, 184, 122, 0.12);
+  --shadow-lg: 0 6px 20px rgba(232, 184, 122, 0.18);
+  --shadow-primary: 0 4px 16px rgba(255, 138, 92, 0.25);
+
+  /* --- 动画变量 (同默认主题) --- */
+  --anim-duration: 0.3s;
+  --anim-easing: cubic-bezier(0.25, 0.8, 0.25, 1);
+  --anim-translate-y: 20px;
+  --transition-bg-color: background-color 0.3s ease;
+  --transition-base: all 0.3s ease;
+  --transition-shadow: box-shadow 0.3s ease;
+  --transition-transform: transform 0.3s ease;
 }

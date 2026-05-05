@@ -36,7 +36,7 @@ const error = computed(() => {
 
 <style lang="scss" scoped>
 .error-page {
-    background-color: var(--bg-color, #ffffff);
+    background-color: var(--bg-color);
     transition: var(--transition-bg-color);
     padding: 1.5rem 1rem 2rem; // 上 1.5rem，下 2rem（略多一点避免贴底）
     min-height: calc(100vh - 80px); // 减去 header 高度
@@ -47,31 +47,31 @@ const error = computed(() => {
         margin: 0 auto; // 水平居中
 
         .card {
-            background: var(--bg-color, #fff);
+            background: var(--bg-secondary-color);
             transition: var(--transition-bg-color);
             padding: 2rem;
             border-radius: 12px;
-            box-shadow: 0 4px 20px rgba(93, 138, 168, 0.1); // 保持原始值，但基于 --secondary-color 的透明版本
+            box-shadow: var(--shadow-md); // 保持原始值，但基于 --secondary-color 的透明版本
             text-align: center;
             line-height: 1.6;
-            color: var(--text-color, #333);
+            color: var(--text-color);
 
             .title {
-                color: var(--secondary-color, #5d8aa8);
+                color: var(--secondary-color);
                 font-size: 2rem;
                 margin-bottom: 1rem;
                 font-weight: 700;
             }
 
             .message {
-                color: var(--meta-color, #666); // 使用 --meta-color 更合适
+                color: var(--meta-color); // 使用 --meta-color 更合适
                 margin-bottom: 1.5rem;
                 font-size: 1.1rem;
             }
 
             .back-link {
                 display: inline-block;
-                color: var(--primary-color, #ff7aae); // 强调色使用 --primary-color
+                color: var(--primary-color); // 强调色使用 --primary-color
                 text-decoration: none;
                 font-weight: 600;
                 padding: 0.5rem 1rem;
@@ -79,8 +79,8 @@ const error = computed(() => {
                 transition: all 0.2s ease;
 
                 &:hover {
-                    color: var(--secondary-color, #5d8aa8); // hover 状态使用 --secondary-color
-                    background-color: var(--selected-bg-color, rgba(255, 158, 181, 0.1)); // 背景高亮使用 --selected-bg-color
+                    color: var(--secondary-color); // hover 状态使用 --secondary-color
+                    background-color: var(--selected-bg-color); // 背景高亮使用 --selected-bg-color
                     text-decoration: none;
                 }
             }

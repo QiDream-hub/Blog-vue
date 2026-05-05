@@ -28,7 +28,7 @@ const routes = router.options.routes.filter(
 
 .nav-link {
     text-decoration: none;
-    color: var(--secondary-color, #5d8aa8);
+    color: var(--secondary-color);
     font-weight: 600;
     padding: 0.5rem 1rem;
     border-radius: 20px;
@@ -43,13 +43,13 @@ const routes = router.options.routes.filter(
         left: 50%;
         width: 0;
         height: 2px;
-        background-color: var(--primary-color, #ff9eb5);
+        background-color: var(--primary-color);
         transition: all 0.3s ease;
         transform: translateX(-50%);
     }
 
     &:hover {
-        color: var(--selected-color, #ff6b9d);
+        color: var(--selected-color);
 
         &::after {
             width: 80%;
@@ -58,12 +58,12 @@ const routes = router.options.routes.filter(
 }
 
 .nav-link--active {
-    color: var(--selected-color, #ff6b9d) !important;
-    background-color: var(--selected-bg-color, rgba(255, 158, 181, 0.1)) !important;
+    color: var(--selected-color) !important;
+    background-color: var(--selected-bg-color) !important;
 
     &::after {
         width: 100% !important;
-        background-color: var(--selected-color, #ff6b9d);
+        background-color: var(--selected-color);
     }
 }
 </style>

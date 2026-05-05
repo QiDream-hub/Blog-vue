@@ -58,19 +58,17 @@ const handleClick = () => {
 <style lang="scss" scoped>
 .blog-card {
   width: 100%;
-  background: var(--bg-color, #ffffff);
+  background: var(--bg-color);
   border-radius: 16px;
   overflow: hidden;
-  box-shadow: 0 4px 16px rgba(93, 138, 168, 0.12);
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  box-shadow: var(--shadow-md);
   cursor: pointer;
   display: flex;
   flex-direction: column;
-  transition: var(--transition-bg-color);
 
   &:hover {
     transform: translateY(-4px);
-    box-shadow: 0 6px 20px rgba(93, 138, 168, 0.18);
+    box-shadow: var(--shadow-lg);
   }
 
   &__cover {
@@ -78,7 +76,7 @@ const handleClick = () => {
     padding-top: 56.25%; // 对应于16:9的比例
     position: relative;
     overflow: hidden;
-    background: var(--bg-color, #ffffff);
+    background: var(--bg-secondary-color);
 
     img {
       position: absolute;
@@ -105,14 +103,14 @@ const handleClick = () => {
   &__title {
     font-size: 1.25rem;
     font-weight: 700;
-    color: var(--secondary-color, #5d8aa8);
+    color: var(--secondary-color);
     margin: 0 0 0.8rem;
     line-height: 1.4;
   }
 
   &__excerpt {
     font-size: 0.95rem;
-    color: var(--description-color, #6a8ba8);
+    color: var(--description-color);
     line-height: 1.6;
     margin: 0 0 1rem;
     flex: 1;
@@ -125,8 +123,8 @@ const handleClick = () => {
   }
 
   &__tag {
-    background-color: var(--tag-bg-color, rgba(255, 158, 181, 0.15));
-    color: var(--tag-text-color, #ff6b9d);
+    background-color: var(--tag-bg-color);
+    color: var(--tag-text-color);
     font-size: 0.85rem;
     padding: 0.25rem 0.6rem;
     border-radius: 20px;

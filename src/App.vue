@@ -27,7 +27,7 @@
 .main-content {
   flex: 1; // 关键！让 main 占据剩余所有空间
   padding: 2rem;
-  background-color: var(--bg-color, #fafafa);
+  background-color: var(--bg-secondary-color);
   transition: var(--transition-bg-color);
 }
 </style>

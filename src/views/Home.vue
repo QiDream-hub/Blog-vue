@@ -130,11 +130,11 @@ const filteredPosts = computed(() => {
 input {
     width: 100%;
     padding: 8px 12px;
-    border: 1px solid var(--border-color, rgba(93, 138, 168, 0.15));
+    border: 1px solid var(--border-color);
     border-radius: 4px;
-    background-color: var(--bg-color, #ffffff);
+    background-color: var(--bg-color);
     transition: var(--transition-bg-color);
-    color: var(--text-color, #333333);
+    color: var(--text-color);
 }
 
 /* --- 修复后的卡片网格 --- */
@@ -165,21 +165,21 @@ input {
 
 /* --- 标签选中状态 --- */
 .tag-card--selected {
-    border: 2px solid var(--primary-color, #ff7aae);
-    box-shadow: 0 4px 16px rgba(255, 107, 157, 0.3);
+    border: 2px solid var(--primary-color);
+    box-shadow: var(--shadow-primary);
     transition: all 0.2s ease;
 }
 
 .tag-card--selected .tag-card__title {
-    color: #ffffff;
-    background-color: var(--primary-color, #ff7aae);
+    color: var(--bg-color);
+    background-color: var(--primary-color);
     padding: 0.2rem 0.5rem;
     border-radius: 8px;
 }
 
 .tag-card--selected .tag-card__description,
 .tag-card--selected .tag-card__meta {
-    color: var(--primary-color, #ff7aae);
+    color: var(--primary-color);
 }
 
 /* --- 动画定义 --- */
