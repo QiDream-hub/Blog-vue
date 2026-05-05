@@ -138,6 +138,7 @@ watch(() => props.content, addCopyButtons, { immediate: true })
         overflow-x: auto;
         margin: 1.2rem 0;
         box-shadow: var(--shadow-sm);
+        transition: var(--transition-bg-color);
 
         .copy-code-button {
             position: absolute;
@@ -151,7 +152,7 @@ watch(() => props.content, addCopyButtons, { immediate: true })
             font-size: 0.85rem;
             cursor: pointer;
             z-index: 1;
-            transition: all 0.2s ease;
+            transition: var(--transition-bg-color);
         }
 
         .copy-code-button:hover {
