@@ -39,7 +39,7 @@ const error = computed(() => {
     background-color: var(--bg-color);
     transition: var(--transition-bg-color);
     padding: 1.5rem 1rem 2rem; // 上 1.5rem，下 2rem（略多一点避免贴底）
-    min-height: calc(100vh - 80px); // 减去 header 高度
+    min-height: calc(50vh - 80px); // 减去 header 高度
 
     .container {
         max-width: 600px;

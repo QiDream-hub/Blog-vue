@@ -7,8 +7,8 @@
         </button>
         <!-- 主题选择下拉菜单 -->
         <div v-if="showPicker" class="theme-picker">
-            <button 
-                v-for="(theme, key) in availableThemes" 
+            <button
+                v-for="(theme, key) in availableThemes"
                 :key="key"
                 @click="selectTheme(key)"
                 :class="['theme-option', { active: currentTheme === key }]"
@@ -21,44 +21,34 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { getAvailableThemes, getThemeMeta, getCurrentTheme, setTheme } from '../styles/ThemeStore';
 
-// 可用主题配置
-const availableThemes = {
-    sakura: { name: '樱花粉', icon: '🌸' },
-    midnight: { name: '午夜蓝', icon: '🌙' },
-    forest: { name: '森林绿', icon: '🌲' },
-    sunset: { name: '落日橙', icon: '🌅' }
-};
+// 可用主题配置（从 ThemeStore 获取）
+const availableThemes = getAvailableThemes();
 
-const currentTheme = ref('sakura');
+const currentTheme = ref(getCurrentTheme());
 const showPicker = ref(false);
 
 // 当前主题名称
 const currentThemeName = computed(() => {
-    return availableThemes[currentTheme.value]?.name || '樱花粉';
+    return getThemeMeta(currentTheme.value).name;
 });
 
 // 当前主题图标
 const currentThemeIcon = computed(() => {
-    return availableThemes[currentTheme.value]?.icon || '🌸';
+    return getThemeMeta(currentTheme.value).icon;
 });
 
-// 应用主题到 HTML 元素
-function applyTheme(themeKey) {
-    document.documentElement.setAttribute('data-theme', themeKey);
-    localStorage.setItem('theme', themeKey);
-    currentTheme.value = themeKey;
-}
-
-// 切换主题（循环切换）
+// 切换主题（显示/隐藏选择器）
 function toggleTheme() {
     showPicker.value = !showPicker.value;
 }
 
 // 选择特定主题
 function selectTheme(themeKey) {
-    applyTheme(themeKey);
+    setTheme(themeKey);
+    currentTheme.value = themeKey;
     showPicker.value = false;
 }
 
@@ -70,16 +60,11 @@ function handleClickOutside(e) {
 }
 
 onMounted(() => {
-    // 从 localStorage 恢复主题
-    const savedTheme = localStorage.getItem('theme');
-    if (savedTheme && availableThemes[savedTheme]) {
-        applyTheme(savedTheme);
-    } else {
-        applyTheme('sakura'); // 默认主题
-    }
-    
-    // 添加全局点击事件监听
     document.addEventListener('click', handleClickOutside);
+});
+
+onUnmounted(() => {
+    document.removeEventListener('click', handleClickOutside);
 });
 </script>
 
