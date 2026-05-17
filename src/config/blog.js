@@ -1,31 +1,44 @@
 /**
  * 博客配置文件
- * 
- * 使用前需要将 lmjweb 中的博客信息对象指针填入 BLOG_INFO_PTR
+ *
+ * 配置从 /blog.config.json 动态加载
+ * 打包时该文件会独立输出到 dist/blog.config.json，可独立修改
  */
 
-export const BLOG_CONFIG = {
-  /**
-   * lmjweb API 地址
-   */
-  LMJWEB_API: 'http://localhost:8080',
-  
-  /**
-   * 博客信息对象指针
-   * 需要在 lmjweb 中创建博客信息对象后，将指针填入此处
-   * 格式：01 开头的 34 位十六进制字符串
-   */
-  BLOG_INFO_PTR: '0100000000000000000000000000000001',
-  
-  /**
-   * 图片访问基础路径 (Nginx 代理)
-   */
-  IMAGE_BASE: '/img/',
-  
-  /**
-   * 文章内容访问基础路径 (Nginx 代理)
-   */
-  ARTICLE_BASE: '/article/'
+let config = null
+let configPromise = null
+
+/**
+ * 初始化配置（在应用启动时调用）
+ * @returns {Promise<void>}
+ */
+export async function initConfig() {
+  if (config) return
+  if (!configPromise) {
+    configPromise = fetch('/blog.config.json')
+      .then(res => {
+        if (!res.ok) {
+          throw new Error('配置文件加载失败')
+        }
+        return res.json()
+      })
+      .then(data => {
+        config = data
+        return data
+      })
+  }
+  await configPromise
+}
+
+/**
+ * 获取配置对象
+ * @returns {object} 配置对象
+ */
+export function getConfig() {
+  if (!config) {
+    throw new Error('配置未初始化，请先调用 initConfig()')
+  }
+  return config
 }
 
 /**
@@ -35,7 +48,10 @@ export const BLOG_CONFIG = {
  */
 export function getImageUrl(ptr) {
   if (!ptr) return ''
-  return `${BLOG_CONFIG.IMAGE_BASE}${ptr}`
+  if (!config) {
+    throw new Error('配置未初始化')
+  }
+  return `${config.IMAGE_BASE}${ptr}`
 }
 
 /**
@@ -45,5 +61,14 @@ export function getImageUrl(ptr) {
  */
 export function getArticleUrl(ptr) {
   if (!ptr) return ''
-  return `${BLOG_CONFIG.ARTICLE_BASE}${ptr}`
+  if (!config) {
+    throw new Error('配置未初始化')
+  }
+  return `${config.ARTICLE_BASE}${ptr}`
 }
+
+// 同步导出，供 initConfig 之前使用
+export const LMJWEB_API = 'http://localhost:8080'
+export const BLOG_INFO_PTR = '0100000000000000000000000000000001'
+export const IMAGE_BASE = '/img/'
+export const ARTICLE_BASE = '/article/'

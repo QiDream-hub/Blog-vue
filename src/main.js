@@ -11,9 +11,11 @@ import TagCard from './components/TagCard.vue'
 import ThemeToggle from './components/ThemeToggle.vue'
 import './styles/variables.css'
 import { initTheme } from './styles/ThemeStore'
+import { initConfig } from './config/blog'
 
-// 初始化主题（在挂载应用之前）
+// 初始化主题和配置（在挂载应用之前）
 initTheme()
+initConfig()
 
 const app = createApp(App)
 

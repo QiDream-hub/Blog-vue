@@ -1,10 +1,26 @@
 /**
  * lmjweb API 服务封装
- * 
+ *
  * 提供对 lmjweb 元数据服务的所有操作
  */
 
-import { BLOG_CONFIG } from '@/config/blog'
+import { getConfig } from '@/config/blog'
+
+/**
+ * 获取 API 基础 URL
+ */
+function getApiUrl() {
+  const config = getConfig()
+  return config.LMJWEB_API
+}
+
+/**
+ * 获取博客信息对象指针
+ */
+function getBlogInfoPtr() {
+  const config = getConfig()
+  return config.BLOG_INFO_PTR
+}
 
 /**
  * 检查指针是否存在
@@ -12,7 +28,7 @@ import { BLOG_CONFIG } from '@/config/blog'
  * @returns {Promise<{exist: boolean, type?: string}>}
  */
 export async function checkPtrExist(ptr) {
-  const response = await fetch(`${BLOG_CONFIG.LMJWEB_API}/ptr/${ptr}/exist`)
+  const response = await fetch(`${getApiUrl()}/ptr/${ptr}/exist`)
   return response.json()
 }
 
@@ -21,7 +37,7 @@ export async function checkPtrExist(ptr) {
  * @returns {Promise<{status: string, uptime: number}>}
  */
 export async function healthCheck() {
-  const response = await fetch(`${BLOG_CONFIG.LMJWEB_API}/health`)
+  const response = await fetch(`${getApiUrl()}/health`)
   return response.json()
 }
 
@@ -32,7 +48,7 @@ export async function healthCheck() {
  * @returns {Promise<{ptr: string}>}
  */
 export async function createObject() {
-  const response = await fetch(`${BLOG_CONFIG.LMJWEB_API}/obj`, {
+  const response = await fetch(`${getApiUrl()}/obj`, {
     method: 'POST'
   })
   return response.json()
@@ -44,7 +60,7 @@ export async function createObject() {
  * @returns {Promise<{ptr: string, members: Array<{name: string, value: string, type: string}>, count: number}>}
  */
 export async function getObject(ptr) {
-  const response = await fetch(`${BLOG_CONFIG.LMJWEB_API}/obj/${ptr}`)
+  const response = await fetch(`${getApiUrl()}/obj/${ptr}`)
   if (!response.ok) {
     if (response.status === 404) {
       throw new Error('Object not found')
@@ -61,7 +77,7 @@ export async function getObject(ptr) {
  * @returns {Promise<{member: string, value: string, type: string}>}
  */
 export async function getObjectMember(ptr, member) {
-  const response = await fetch(`${BLOG_CONFIG.LMJWEB_API}/obj/${ptr}/${member}`)
+  const response = await fetch(`${getApiUrl()}/obj/${ptr}/${member}`)
   if (!response.ok) {
     if (response.status === 404) {
       throw new Error('Member not found')
@@ -79,7 +95,7 @@ export async function getObjectMember(ptr, member) {
  * @returns {Promise<{success: boolean}>}
  */
 export async function setObjectMember(ptr, member, value) {
-  const response = await fetch(`${BLOG_CONFIG.LMJWEB_API}/obj/${ptr}/${member}`, {
+  const response = await fetch(`${getApiUrl()}/obj/${ptr}/${member}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ value })
@@ -94,7 +110,7 @@ export async function setObjectMember(ptr, member, value) {
  * @returns {Promise<{success: boolean}>}
  */
 export async function deleteObjectMember(ptr, member) {
-  const response = await fetch(`${BLOG_CONFIG.LMJWEB_API}/obj/${ptr}/${member}`, {
+  const response = await fetch(`${getApiUrl()}/obj/${ptr}/${member}`, {
     method: 'DELETE'
   })
   return response.json()
@@ -106,7 +122,7 @@ export async function deleteObjectMember(ptr, member) {
  * @returns {Promise<{success: boolean}>}
  */
 export async function deleteObject(ptr) {
-  const response = await fetch(`${BLOG_CONFIG.LMJWEB_API}/obj/${ptr}`, {
+  const response = await fetch(`${getApiUrl()}/obj/${ptr}`, {
     method: 'DELETE'
   })
   return response.json()
@@ -118,7 +134,7 @@ export async function deleteObject(ptr) {
  * @returns {Promise<{path: string, value: string, type: string}>}
  */
 export async function queryObjectPath(path) {
-  const response = await fetch(`${BLOG_CONFIG.LMJWEB_API}/obj/query?path=${encodeURIComponent(path)}`)
+  const response = await fetch(`${getApiUrl()}/obj/query?path=${encodeURIComponent(path)}`)
   if (!response.ok) {
     throw new Error(`Query failed: ${response.statusText}`)
   }
@@ -132,7 +148,7 @@ export async function queryObjectPath(path) {
  * @returns {Promise<{ptr: string}>}
  */
 export async function createSet() {
-  const response = await fetch(`${BLOG_CONFIG.LMJWEB_API}/set`, {
+  const response = await fetch(`${getApiUrl()}/set`, {
     method: 'POST'
   })
   return response.json()
@@ -144,7 +160,7 @@ export async function createSet() {
  * @returns {Promise<{ptr: string, elements: Array<{value: string, type: string}>, count: number}>}
  */
 export async function getSet(ptr) {
-  const response = await fetch(`${BLOG_CONFIG.LMJWEB_API}/set/${ptr}`)
+  const response = await fetch(`${getApiUrl()}/set/${ptr}`)
   if (!response.ok) {
     if (response.status === 404) {
       throw new Error('Set not found')
@@ -161,7 +177,7 @@ export async function getSet(ptr) {
  * @returns {Promise<{success: boolean}>}
  */
 export async function addSetElement(ptr, value) {
-  const response = await fetch(`${BLOG_CONFIG.LMJWEB_API}/set/${ptr}/elements`, {
+  const response = await fetch(`${getApiUrl()}/set/${ptr}/elements`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ value })
@@ -176,7 +192,7 @@ export async function addSetElement(ptr, value) {
  * @returns {Promise<{success: boolean}>}
  */
 export async function deleteSetElement(ptr, value) {
-  const response = await fetch(`${BLOG_CONFIG.LMJWEB_API}/set/${ptr}/elements`, {
+  const response = await fetch(`${getApiUrl()}/set/${ptr}/elements`, {
     method: 'DELETE',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ value })
@@ -190,7 +206,7 @@ export async function deleteSetElement(ptr, value) {
  * @returns {Promise<{success: boolean}>}
  */
 export async function deleteSet(ptr) {
-  const response = await fetch(`${BLOG_CONFIG.LMJWEB_API}/set/${ptr}`, {
+  const response = await fetch(`${getApiUrl()}/set/${ptr}`, {
     method: 'DELETE'
   })
   return response.json()
@@ -205,7 +221,7 @@ export async function deleteSet(ptr) {
  * @returns {Promise<{success: boolean, results: Array<{status: number, body: any}>}>}
  */
 export async function batchOperations(operations, readonly = false) {
-  const response = await fetch(`${BLOG_CONFIG.LMJWEB_API}/batch`, {
+  const response = await fetch(`${getApiUrl()}/batch`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ readonly, operations })
@@ -220,7 +236,7 @@ export async function batchOperations(operations, readonly = false) {
  * @returns {Promise<{ptr: string, title: string, postsPtr: string, tagsPtr: string}>}
  */
 export async function getBlogInfo() {
-  const obj = await getObject(BLOG_CONFIG.BLOG_INFO_PTR)
+  const obj = await getObject(getBlogInfoPtr())
   const result = { ptr: obj.ptr }
   
   for (const member of obj.members) {
