@@ -1,0 +1,963 @@
+# LMJCore-Web API 参考文档
+
+## 快速开始
+
+### 启动服务器
+
+```bash
+# 使用默认配置启动
+./lmjcore_server
+
+# 指定端口
+./lmjcore_server -p 9000
+
+# 使用配置文件
+./lmjcore_server -C /etc/lmjcore.conf
+
+# 查看帮助
+./lmjcore_server --help
+```
+
+### 配置说明
+
+| 配置方式 | 说明 |
+|----------|------|
+| 命令行参数 | 最高优先级，支持 `-p`, `-d`, `-C` 等 |
+| 配置文件 | `lmjcore.conf` INI 格式 |
+| 默认值 | 内置默认配置 |
+
+详细配置请参考 [设计文档](./lmjcore_web.md#7-配置管理)
+
+---
+
+## API 概览
+
+| 类别 | 端点数量 | 说明 |
+|------|----------|------|
+| 对象操作 | 7 | 对象的 CRUD 和链式查询 |
+| 集合操作 | 5 | 集合的 CRUD |
+| 工具接口 | 2 | 健康检查和指针验证 |
+| 批量操作 | 1 | 事务内批量执行多个操作 |
+| **总计** | **15** | |
+
+---
+
+## 批量操作 API
+
+### 15. 批量执行操作
+
+**请求**
+```http
+POST /batch
+Content-Type: application/json
+
+{
+  "readonly": false,
+  "operations": [
+    {
+      "method": "PUT",
+      "path": "/obj/01abc123.../name",
+      "body": {"value": "Alice"}
+    },
+    {
+      "method": "GET",
+      "path": "/obj/01abc123..."
+    },
+    {
+      "method": "DELETE",
+      "path": "/obj/01abc123.../temp"
+    }
+  ]
+}
+```
+
+**请求体字段**
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `readonly` | boolean | 可选，默认 `false`。`true` 表示只读事务 |
+| `operations` | array | 操作列表，最大 1000 个操作 |
+
+**操作结构**
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `method` | string | HTTP 方法：`GET`、`PUT`、`POST`、`DELETE` |
+| `path` | string | 完整路径，如 `/obj/{ptr}`、`/obj/{ptr}/{member}`、`/set/{ptr}` |
+| `body` | object | 可选，仅 `PUT`/`POST` 需要，格式 `{"value": "..."}` |
+
+**成功响应**
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json
+
+{
+  "success": true,
+  "results": [
+    {
+      "status": 200,
+      "body": {"success": true}
+    },
+    {
+      "status": 200,
+      "body": {
+        "ptr": "01abc123def456789012345678901234",
+        "type": "object"
+      }
+    },
+    {
+      "status": 200,
+      "body": {"success": true}
+    }
+  ]
+}
+```
+
+**错误响应**
+```http
+HTTP/1.1 400 Bad Request
+Content-Type: application/json
+
+{
+  "success": false,
+  "failed_at": 1,
+  "details": {
+    "error": "Object not found"
+  }
+}
+```
+
+**错误响应字段**
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `success` | boolean | 始终为 `false` |
+| `failed_at` | number | 失败操作的索引（从 0 开始） |
+| `details` | object/string | 错误详情（JSON 对象或字符串） |
+
+**说明**
+- **原子性**: 所有操作在同一事务内执行，任一操作失败则全部回滚
+- **写事务**: 默认模式，支持所有操作类型，限制总时长（默认 5 秒超时）
+- **只读事务**: 设置 `readonly: true` 时，如果操作中包含写操作（PUT/POST/DELETE）则返回错误
+- **操作限制**: 最多支持 1000 个并发操作
+- **错误处理**: 失败时返回 `failed_at` 字段指示失败位置，便于调试
+
+**响应格式说明**
+- `results` 数组中的每个元素对应一个操作
+- `status` 字段为该操作的 HTTP 状态码
+- `body` 字段为该操作的响应体（自动解析为 JSON 对象或保留为字符串）
+
+**使用示例**
+
+示例 1：批量设置对象属性
+```json
+{
+  "operations": [
+    {
+      "method": "PUT",
+      "path": "/obj/01abc123def456789012345678901234/name",
+      "body": {"value": "Alice"}
+    },
+    {
+      "method": "PUT",
+      "path": "/obj/01abc123def456789012345678901234/age",
+      "body": {"value": "30"}
+    },
+    {
+      "method": "GET",
+      "path": "/obj/01abc123def456789012345678901234"
+    }
+  ]
+}
+```
+
+示例 2：创建对象后批量设置（需要客户端先获取指针）
+```bash
+# 步骤 1：创建对象，获取指针
+curl -X POST http://localhost:8080/obj
+# 返回：{"ptr": "01abc123def456789012345678901234"}
+
+# 步骤 2：使用指针批量设置属性
+curl -X POST http://localhost:8080/batch \
+  -H "Content-Type: application/json" \
+  -d '{
+    "operations": [
+      {"method": "PUT", "path": "/obj/01abc123.../name", "body": {"value": "Alice"}},
+      {"method": "PUT", "path": "/obj/01abc123.../age", "body": {"value": "30"}}
+    ]
+  }'
+```
+
+示例 3：只读事务批量查询
+```json
+{
+  "readonly": true,
+  "operations": [
+    {"method": "GET", "path": "/obj/01abc123..."},
+    {"method": "GET", "path": "/obj/01abc123.../name"},
+    {"method": "GET", "path": "/set/02def456..."}
+  ]
+}
+```
+
+**注意事项**
+- 批量操作**不支持别名引用**：每个操作的 `path` 必须使用完整的指针字符串
+- 如需在批量操作中引用新创建的对象指针，需分两步：先创建获取指针，再批量操作
+- 失败时事务自动回滚，已执行的操作不会生效
+
+---
+
+## 对象操作 API
+
+### 1. 创建对象
+
+**请求**
+```http
+POST /obj
+```
+
+**响应**
+```http
+HTTP/1.1 201 Created
+Content-Type: application/json
+
+{
+  "ptr": "01abc123def456789012345678901234"
+}
+```
+
+**说明**
+- 创建一个空对象
+- 返回对象的指针字符串（34 位十六进制）
+- 指针前缀 `01` 表示对象类型
+
+---
+
+### 2. 获取完整对象
+
+**请求**
+```http
+GET /obj/{ptr}
+```
+
+**路径参数**
+| 参数 | 类型 | 说明 |
+|------|------|------|
+| `ptr` | string | 对象指针（34 位十六进制） |
+
+**成功响应**
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json
+
+{
+  "ptr": "01abc123def456789012345678901234",
+  "members": [
+    {
+      "name": "username",
+      "value": "alice",
+      "type": "raw"
+    },
+    {
+      "name": "profile",
+      "value": "01def456789012345678901234567890",
+      "type": "ref"
+    },
+    {
+      "name": "email",
+      "value": null,
+      "type": "null"
+    }
+  ],
+  "count": 3
+}
+```
+
+**错误响应**
+```http
+HTTP/1.1 404 Not Found
+Content-Type: application/json
+
+{
+  "error": "Object not found"
+}
+```
+
+---
+
+### 3. 获取成员值
+
+**请求**
+```http
+GET /obj/{ptr}/{member}
+```
+
+**路径参数**
+| 参数 | 类型 | 说明 |
+|------|------|------|
+| `ptr` | string | 对象指针 |
+| `member` | string | 成员名 |
+
+**成功响应**
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json
+
+{
+  "member": "username",
+  "value": "alice",
+  "type": "raw"
+}
+```
+
+**值类型说明**
+| type | 说明 | value 格式 |
+|------|------|-----------|
+| `raw` | 原始数据 | 字符串 |
+| `ref` | 指针引用 | 34 位十六进制字符串 |
+| `null` | 空值 | null |
+
+**错误响应**
+```http
+HTTP/1.1 404 Not Found
+Content-Type: application/json
+
+{
+  "error": "Member not found"
+}
+```
+
+---
+
+### 4. 设置成员值
+
+**请求**
+```http
+PUT /obj/{ptr}/{member}
+Content-Type: application/json
+
+{
+  "value": "string value or 01abc123... pointer"
+}
+```
+
+**路径参数**
+| 参数 | 类型 | 说明 |
+|------|------|------|
+| `ptr` | string | 对象指针 |
+| `member` | string | 成员名 |
+
+**请求体**
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `value` | string | 要设置的值（原始数据或指针字符串） |
+
+**成功响应**
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json
+
+{
+  "success": true
+}
+```
+
+**说明**
+- 自动识别值类型：
+  - 34 位十六进制且以 `01` 或 `02` 开头 → 指针引用
+  - `null` → 空值
+  - 其他 → 原始数据
+
+---
+
+### 5. 删除成员
+
+**请求**
+```http
+DELETE /obj/{ptr}/{member}
+```
+
+**路径参数**
+| 参数 | 类型 | 说明 |
+|------|------|------|
+| `ptr` | string | 对象指针 |
+| `member` | string | 成员名 |
+
+**成功响应**
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json
+
+{
+  "success": true
+}
+```
+
+**⚠️ 重要说明：删除最后一个成员会导致对象被删除**
+
+由于 LMJCore 基于 LMDB 存储引擎，对象的成员列表存储在 LMDB 的 `set` 空间中。LMDB 有一个关键特性：
+
+> **当删除一个键的所有值时，该键会被 LMDB 自动删除（不允许空键）。**
+
+这意味着：
+- 删除对象的**最后一个成员**后，该对象指针在 `set` 中将不存在
+- 对象的存在性由 `set` 定义，因此**对象本身被视为已删除**
+- 后续对该对象的访问将返回 404 错误
+
+**示例**：
+```js
+// 初始状态：对象有一个成员
+{ "name": "Alice" }
+
+// 删除最后一个成员
+DELETE /obj/01abc123.../name
+
+// 结果：对象不再存在
+GET /obj/01abc123...  // → 404 Not Found
+```
+
+**建议**：
+- 避免删除对象的最后一个成员
+- 如需清空对象，可保留一个占位成员（如 `_empty: null`）
+- 在应用层追踪对象的状态，避免意外删除
+
+---
+
+### 7. 删除完整对象
+
+**请求**
+```http
+DELETE /obj/{ptr}
+```
+
+**路径参数**
+| 参数 | 类型 | 说明 |
+|------|------|------|
+| `ptr` | string | 对象指针（34 位十六进制） |
+
+**成功响应**
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json
+
+{
+  "success": true
+}
+```
+
+**说明**
+- 完全删除对象及其所有成员
+- 同时删除 `set` 库中的成员列表和 `main` 库中的所有成员值
+- 删除后该对象指针变为无效
+
+**错误响应**
+```http
+HTTP/1.1 404 Not Found
+Content-Type: application/json
+
+{
+  "error": "Object not found"
+}
+```
+
+---
+
+### 8. 链式查询
+
+**请求**
+```http
+GET /obj/query?path={path}
+```
+
+**查询参数**
+| 参数 | 类型 | 说明 |
+|------|------|------|
+| `path` | string | 查询路径（格式：`<指针>.<member1>.<member2>...`） |
+
+**示例**
+```http
+GET /obj/query?path=01abc123.user.profile.name
+```
+
+**成功响应**
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json
+
+{
+  "path": "01abc123.user.profile.name",
+  "value": "alice",
+  "type": "raw"
+}
+```
+
+**错误响应**
+```http
+HTTP/1.1 404 Not Found
+Content-Type: application/json
+
+{
+  "error": "Member not found"
+}
+```
+
+```http
+HTTP/1.1 400 Bad Request
+Content-Type: application/json
+
+{
+  "error": "Intermediate value is not a reference"
+}
+```
+
+**说明**
+- 支持多层嵌套路径
+- 中间值必须是指针引用（`ref` 类型）才能继续解析
+- 遇到集合类型返回错误
+
+---
+
+## 集合操作 API
+
+### 9. 创建集合
+
+**请求**
+```http
+POST /set
+```
+
+**响应**
+```http
+HTTP/1.1 201 Created
+Content-Type: application/json
+
+{
+  "ptr": "02def456789012345678901234567890"
+}
+```
+
+**说明**
+- 创建一个空集合
+- 指针前缀 `02` 表示集合类型
+
+---
+
+### 10. 获取完整集合
+
+**请求**
+```http
+GET /set/{ptr}
+```
+
+**路径参数**
+| 参数 | 类型 | 说明 |
+|------|------|------|
+| `ptr` | string | 集合指针 |
+
+**成功响应**
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json
+
+{
+  "ptr": "02def456789012345678901234567890",
+  "elements": [
+    {
+      "value": "apple",
+      "type": "raw"
+    },
+    {
+      "value": "01abc123def456789012345678901234",
+      "type": "ref"
+    },
+    {
+      "value": null,
+      "type": "null"
+    }
+  ],
+  "count": 3
+}
+```
+
+**说明**
+- 集合是无序的，不保证元素插入顺序
+- 支持指针引用作为元素
+
+---
+
+### 11. 添加元素
+
+**请求**
+```http
+POST /set/{ptr}/elements
+Content-Type: application/json
+
+{
+  "value": "element value"
+}
+```
+
+**路径参数**
+| 参数 | 类型 | 说明 |
+|------|------|------|
+| `ptr` | string | 集合指针 |
+
+**请求体**
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `value` | string | 要添加的元素值 |
+
+**成功响应**
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json
+
+{
+  "success": true
+}
+```
+
+**错误响应**
+```http
+HTTP/1.1 409 Conflict
+Content-Type: application/json
+
+{
+  "error": "Element already exists"
+}
+```
+
+---
+
+### 12. 删除元素
+
+**请求**
+```http
+DELETE /set/{ptr}/elements
+Content-Type: application/json
+
+{
+  "value": "element value"
+}
+```
+
+**路径参数**
+| 参数 | 类型 | 说明 |
+|------|------|------|
+| `ptr` | string | 集合指针 |
+
+**请求体**
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `value` | string | 要删除的元素值 |
+
+**成功响应**
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json
+
+{
+  "success": true
+}
+```
+
+**⚠️ 重要说明：删除最后一个元素会导致集合被删除**
+
+由于 LMJCore 基于 LMDB 存储引擎，集合的元素存储在 LMDB 的 `set` 空间中。LMDB 有一个关键特性：
+
+> **当删除一个键的所有值时，该键会被 LMDB 自动删除（不允许空键）。**
+
+这意味着：
+- 删除集合的**最后一个元素**后，该集合指针在 `set` 中将不存在
+- 集合的存在性由 `set` 定义，因此**集合本身被视为已删除**
+- 后续对该集合的访问将返回 404 错误
+
+**示例**：
+```js
+// 初始状态：集合有一个元素
+["apple"]
+
+// 删除最后一个元素
+DELETE /set/02def456.../elements
+{ "value": "apple" }
+
+// 结果：集合不再存在
+GET /set/02def456...  // → 404 Not Found
+```
+
+**建议**：
+- 避免删除集合的最后一个元素
+- 如需清空集合，可保留一个占位元素
+- 在应用层追踪集合的状态，避免意外删除
+
+---
+
+### 13. 删除完整集合
+
+**请求**
+```http
+DELETE /set/{ptr}
+```
+
+**路径参数**
+| 参数 | 类型 | 说明 |
+|------|------|------|
+| `ptr` | string | 集合指针（34 位十六进制） |
+
+**成功响应**
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json
+
+{
+  "success": true
+}
+```
+
+**说明**
+- 完全删除集合及其所有元素
+- 删除 `set` 库中该集合指针对应的所有元素
+- 删除后该集合指针变为无效
+
+**错误响应**
+```http
+HTTP/1.1 404 Not Found
+Content-Type: application/json
+
+{
+  "error": "Set not found"
+}
+```
+
+---
+
+## 工具接口 API
+
+### 16. 检查指针是否存在
+
+**请求**
+```http
+GET /ptr/{ptr}/exist
+```
+
+**路径参数**
+| 参数 | 类型 | 说明 |
+|------|------|------|
+| `ptr` | string | 要检查的指针 |
+
+**存在响应**
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json
+
+{
+  "exist": true,
+  "type": "object"
+}
+```
+
+**不存在响应**
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json
+
+{
+  "exist": false
+}
+```
+
+**类型说明**
+| type | 说明 |
+|------|------|
+| `object` | 对象类型（指针前缀 `01`） |
+| `set` | 集合类型（指针前缀 `02`） |
+
+---
+
+### 17. 健康检查
+
+**请求**
+```http
+GET /health
+```
+
+**响应**
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json
+
+{
+  "status": "ok",
+  "uptime": 12345
+}
+```
+
+**字段说明**
+| 字段 | 说明 |
+|------|------|
+| `status` | 服务状态（`ok` 表示正常） |
+| `uptime` | 运行时间（秒） |
+
+---
+
+## 错误码参考
+
+### HTTP 状态码
+
+| 状态码 | 说明 |
+|--------|------|
+| 200 | 成功 |
+| 201 | Created（创建成功） |
+| 400 | Bad Request（请求参数错误） |
+| 404 | Not Found（资源不存在） |
+| 405 | Method Not Allowed（方法不允许） |
+| 408 | Request Timeout（事务超时） |
+| 409 | Conflict（元素已存在） |
+| 500 | Internal Server Error（服务器错误） |
+
+### 错误响应格式
+
+```json
+{
+  "error": "错误描述信息"
+}
+```
+
+### 常见错误
+
+| 错误信息 | HTTP 状态码 | 说明 |
+|----------|-------------|------|
+| `Invalid parameters` | 400 | 参数无效 |
+| `Missing ptr parameter` | 400 | 缺少 ptr 参数 |
+| `Invalid pointer format` | 400 | 指针格式无效 |
+| `Object not found` | 404 | 对象不存在 |
+| `Set not found` | 404 | 集合不存在 |
+| `Member not found` | 404 | 成员不存在 |
+| `Failed to allocate memory` | 500 | 内存分配失败 |
+| `Failed to begin transaction` | 500 | 事务开启失败 |
+| `Failed to commit transaction` | 500 | 事务提交失败 |
+
+---
+
+## 使用示例
+
+### cURL 示例
+
+```bash
+# 1. 创建对象
+curl -X POST http://localhost:8080/obj
+
+# 2. 设置成员值
+curl -X PUT http://localhost:8080/obj/01abc123.../name \
+  -H "Content-Type: application/json" \
+  -d '{"value":"Alice"}'
+
+# 3. 获取成员值
+curl http://localhost:8080/obj/01abc123.../name
+
+# 4. 链式查询
+curl "http://localhost:8080/obj/query?path=01abc123...user.profile.name"
+
+# 5. 创建集合
+curl -X POST http://localhost:8080/set
+
+# 6. 添加元素到集合
+curl -X POST http://localhost:8080/set/02def456.../elements \
+  -H "Content-Type: application/json" \
+  -d '{"value":"apple"}'
+
+# 7. 获取完整集合
+curl http://localhost:8080/set/02def456...
+
+# 8. 检查指针是否存在
+curl http://localhost:8080/ptr/01abc123.../exist
+
+# 9. 健康检查
+curl http://localhost:8080/health
+
+# 10. 删除对象
+curl -X DELETE http://localhost:8080/obj/01abc123...
+
+# 11. 删除集合
+curl -X DELETE http://localhost:8080/set/02def456...
+
+# 12. 批量操作
+curl -X POST http://localhost:8080/batch \
+  -H "Content-Type: application/json" \
+  -d '{
+    "operations": [
+      {"method": "PUT", "path": "/obj/01abc.../name", "body": {"value": "Alice"}},
+      {"method": "GET", "path": "/obj/01abc..."}
+    ]
+  }'
+```
+
+### JavaScript 示例
+
+```javascript
+// 创建对象
+const createObject = async () => {
+  const response = await fetch('http://localhost:8080/obj', {
+    method: 'POST'
+  });
+  const data = await response.json();
+  console.log('Created object:', data.ptr);
+  return data.ptr;
+};
+
+// 设置成员值
+const setMember = async (ptr, member, value) => {
+  const response = await fetch(`http://localhost:8080/obj/${ptr}/${member}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ value })
+  });
+  return await response.json();
+};
+
+// 获取成员值
+const getMember = async (ptr, member) => {
+  const response = await fetch(`http://localhost:8080/obj/${ptr}/${member}`);
+  return await response.json();
+};
+
+// 链式查询
+const queryPath = async (path) => {
+  const response = await fetch(`http://localhost:8080/obj/query?path=${encodeURIComponent(path)}`);
+  return await response.json();
+};
+
+// 批量操作
+const batchOperations = async (operations, readonly = false) => {
+  const response = await fetch('http://localhost:8080/batch', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ readonly, operations })
+  });
+  return await response.json();
+};
+
+// 使用示例
+(async () => {
+  const ptr = await createObject();
+  await setMember(ptr, 'name', 'Alice');
+  const member = await getMember(ptr, 'name');
+  console.log('Member value:', member.value);
+
+  const result = await queryPath(`${ptr}.name`);
+  console.log('Query result:', result);
+
+  // 批量操作示例
+  const batchResult = await batchOperations([
+    { method: 'PUT', path: `/obj/${ptr}/age`, body: { value: '25' } },
+    { method: 'GET', path: `/obj/${ptr}` }
+  ]);
+  console.log('Batch result:', batchResult);
+})();
+```
+
+---
+
+## 版本历史
+
+| 版本 | 日期 | 变更 |
+|------|------|------|
+| 1.0.0 | 2024-01-01 | 初始版本 |
+| 1.1.0 | 2026-05-17 | 添加批量操作 API (`POST /batch`) |

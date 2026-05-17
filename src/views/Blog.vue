@@ -1,64 +1,117 @@
 <template>
-  <BlogPostView v-bind="post" />
+    <div class="blog-post-container">
+        <!-- 加载状态 -->
+        <div v-if="loading" class="loading-container">
+            <div class="loading-spinner"></div>
+            <p>加载文章中...</p>
+        </div>
+        
+        <!-- 文章内容 -->
+        <BlogPostView v-else-if="post" v-bind="post" />
+    </div>
 </template>
 
 <script setup>
 import BlogPostView from '@/components/BlogPostView.vue'
-import { ref, watch } from 'vue'
+import { ref, watch, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-
-const posts = [{
-  title: '我的第一篇博客',
-  content: `# 欢迎使用 Markdown
-
-这是一个用 **Vue + v-md-editor** 渲染的博客示例。
-
-- 支持代码高亮
-- 支持图片
-- 支持列表、表格等
-
-\`\`\`js
-console.log('Hello, pink-blue-white theme!')
-\`\`\`
-
-> 这是一段引用，使用了粉色边框突出显示。
-`,
-  tags: ['Vue', 'Markdown', '前端']
-},
-{
-  title: "js-guide",
-  content: `# 路径测试`,
-  tags: ['Vue', 'Markdown', '前端']
-}
-]
+import { getBlogInfo, getAllPostPtrs, findPostBySlug, getPostDetail } from '@/api/lmjweb'
+import { getArticleUrl, getImageUrl } from '@/config/blog'
 
 const props = defineProps({
-  slug: {
-    type: String,
-    default: ""
-  }
+    slug: {
+        type: String,
+        default: ""
+    }
 })
 
 const route = useRoute()
 const router = useRouter()
 const post = ref(null)
+const loading = ref(true)
 
 const loadPost = async () => {
-  const slug = route.params.slug
-  const found = posts.find(p => p.title === slug) // 测试数据使用title匹配,后期替换路径请求
-  if (!found) {
-    router.replace('/error/blog/not-found')
-    return
-  }
-  post.value = found
+    loading.value = true
+    post.value = null
+    
+    try {
+        const slug = route.params.slug
+        
+        // 1. 获取博客信息
+        const blogInfo = await getBlogInfo()
+        
+        // 2. 根据 slug 查找文章指针
+        const postPtr = await findPostBySlug(blogInfo.postsPtr, slug)
+        
+        if (!postPtr) {
+            router.replace('/error/blog/not-found')
+            return
+        }
+        
+        // 3. 获取文章详情
+        const postDetail = await getPostDetail(postPtr)
+        
+        // 4. 从 Nginx 获取文章内容
+        const contentResponse = await fetch(getArticleUrl(postPtr))
+        if (!contentResponse.ok) {
+            throw new Error('文章内容加载失败')
+        }
+        const content = await contentResponse.text()
+        
+        // 5. 组装完整文章数据
+        post.value = {
+            title: postDetail.title,
+            content: content,
+            tags: postDetail.tags || [],
+            cover: getImageUrl(postDetail.cover)
+        }
+    } catch (err) {
+        console.error('Failed to load post:', err)
+        // 路由到错误页面
+        router.replace('/error/blog/load-failed')
+    } finally {
+        loading.value = false
+    }
 }
 
-// 初始加载 + 监听变化
+// 监听路由变化重新加载
 watch(
-  () => route.params.slug,
-  loadPost,
-  { immediate: true }
+    () => route.params.slug,
+    () => loadPost()
 )
+
+onMounted(() => {
+    loadPost()
+})
 </script>
 
-<style lang="scss" scoped></style>
+<style lang="scss" scoped>
+.blog-post-container {
+    min-height: 60vh;
+    position: relative;
+}
+
+.loading-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 20px;
+    text-align: center;
+    min-height: 400px;
+}
+
+.loading-spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid var(--border-color);
+    border-top-color: var(--primary-color);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 16px;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+</style>

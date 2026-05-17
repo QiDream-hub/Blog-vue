@@ -8,7 +8,7 @@
     <!-- 内容区 -->
     <div class="blog-card__content">
       <h2 class="blog-card__title">{{ title }}</h2>
-      <p class="blog-card__excerpt">{{ excerpt }}</p>
+      <p class="blog-card__excerpt">{{ excerpt || '暂无简介' }}</p>
 
       <!-- 标签区 -->
       <div v-if="tags && tags.length" class="blog-card__tags">
@@ -30,7 +30,7 @@ const props = defineProps({
   },
   excerpt: {
     type: String,
-    default: '暂无简介'
+    default: ''
   },
   cover: {
     type: String,
@@ -73,7 +73,7 @@ const handleClick = () => {
 
   &__cover {
     width: 100%;
-    padding-top: 56.25%; // 对应于16:9的比例
+    padding-top: 56.25%; // 对应于 16:9 的比例
     position: relative;
     overflow: hidden;
     background: var(--bg-secondary-color);
