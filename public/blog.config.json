@@ -1,6 +1,0 @@
-{
-  "LMJWEB_API": "http://localhost:8080",
-  "BLOG_INFO_PTR": "0100000000000000000000000000000001",
-  "IMAGE_BASE": "/img/",
-  "ARTICLE_BASE": "/article/"
-}

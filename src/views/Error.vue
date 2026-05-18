@@ -343,10 +343,15 @@ const errorInfo = computed(() => {
                 .actions {
                     flex-direction: column;
                     gap: 0.6rem;
+                    width: 100%;
+                    box-sizing: border-box;
 
                     .btn {
                         width: 100%;
-                        padding: 0.7rem 1.25rem;
+                        padding: 0.7rem 1rem;
+                        font-size: 0.95rem;
+                        box-sizing: border-box;
+                        white-space: nowrap;
                     }
                 }
             }

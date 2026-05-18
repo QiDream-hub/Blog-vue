@@ -13,7 +13,7 @@ import './styles/variables.css'
 import { initTheme } from './styles/ThemeStore'
 import { initConfig } from './config/blog'
 
-// 初始化主题和配置（在挂载应用之前）
+// 初始化主题和配置（同步执行）
 initTheme()
 initConfig()
 
@@ -24,9 +24,8 @@ app.component("AppFooter", Footer)
 app.component("AppHader", Hader)
 app.component("Navbar", Navbar)
 app.component("BlogPostView", BlogPostView)
-
 app.component("BlogCard", BlogCard)
-app.component("TagCrad",TagCard)
-app.component("ThemeToggle",ThemeToggle)
+app.component("TagCrad", TagCard)
+app.component("ThemeToggle", ThemeToggle)
 
 app.mount('#app')
