@@ -1,0 +1,7 @@
+{
+  "$schema": "./config.schema.json",
+  "lmjwebApi": "http://localhost:8080",
+  "blogInfoPtr": "01blog0000000000000000000000000000",
+  "imagesDir": "/path/to/images",
+  "articlesDir": "/path/to/articles"
+}

@@ -1,0 +1,20 @@
+{
+  "name": "blog-publisher",
+  "version": "1.0.0",
+  "description": "博客内容发布工具 - 在 lmjweb 中注册元数据并管理文件",
+  "type": "module",
+  "main": "publisher.js",
+  "bin": {
+    "blog-pub": "./cli.js"
+  },
+  "scripts": {
+    "pub": "node cli.js"
+  },
+  "keywords": [
+    "blog",
+    "publisher",
+    "lmjweb"
+  ],
+  "author": "",
+  "license": "MIT"
+}
