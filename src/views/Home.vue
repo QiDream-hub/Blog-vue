@@ -50,12 +50,11 @@ import BlogCard from '@/components/BlogCard.vue'
 import TagCard from '@/components/TagCard.vue'
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { 
-    getBlogInfo, 
-    getAllPostPtrs, 
-    getPostDetail,
-    getTagList,
-    getPostsByTag
+import {
+    getBlogInfo,
+    getAllPostPtrs,
+    batchGetPosts,
+    batchGetTagsWithCount
 } from '@/api/lmjweb'
 import { getImageUrl } from '@/config/blog'
 
@@ -69,22 +68,17 @@ const posts = ref([])
 const tags = ref([])
 
 const loadData = async () => {
-    
+
     try {
         // 1. 获取博客信息
         const blogInfo = await getBlogInfo()
-        
+
         // 2. 获取所有文章指针
         const postPtrs = await getAllPostPtrs(blogInfo.postsPtr)
-        
-        // 3. 并行获取所有文章详情
-        const postDetails = await Promise.all(
-            postPtrs.map(ptr => getPostDetail(ptr).catch(err => {
-                console.error(`Failed to load post ${ptr}:`, err)
-                return null
-            }))
-        )
-        
+
+        // 3. 批量获取所有文章详情（优化：单次批量请求）
+        const postDetails = await batchGetPosts(postPtrs)
+
         // 4. 过滤失败的文章，添加图片 URL
         posts.value = postDetails
             .filter(post => post !== null)
@@ -94,33 +88,10 @@ const loadData = async () => {
                 cover: getImageUrl(post.cover),
                 to: `/blogs/${post.slug}`
             }))
-        
-        // 5. 获取标签列表
-        const tagList = await getTagList(blogInfo.tagsPtr)
-        
-        // 6. 并行获取每个标签的文章数量
-        const tagsWithCount = await Promise.all(
-            tagList.map(async tag => {
-                try {
-                    const tagPostPtrs = await getPostsByTag(tag.postsPtr)
-                    return {
-                        ptr: tag.ptr,
-                        name: tag.name,
-                        count: tagPostPtrs.length,
-                        postsPtr: tag.postsPtr
-                    }
-                } catch (err) {
-                    console.error(`Failed to load tag posts ${tag.ptr}:`, err)
-                    return {
-                        ptr: tag.ptr,
-                        name: tag.name,
-                        count: 0,
-                        postsPtr: tag.postsPtr
-                    }
-                }
-            })
-        )
-        
+
+        // 5. 批量获取标签列表及文章数量（优化：单次批量请求）
+        const tagsWithCount = await batchGetTagsWithCount(blogInfo.tagsPtr)
+
         tags.value = tagsWithCount
     } catch (err) {
         console.error('Failed to load blog data:', err)

@@ -231,14 +231,22 @@ export async function batchOperations(operations, readonly = false) {
 
 // ==================== 博客专用方法 ====================
 
+// 博客信息缓存（避免重复请求）
+let blogInfoCache = null
+
 /**
- * 获取博客信息
+ * 获取博客信息（带缓存）
+ * @param {boolean} forceRefresh - 是否强制刷新缓存
  * @returns {Promise<{ptr: string, title: string, postsPtr: string, tagsPtr: string}>}
  */
-export async function getBlogInfo() {
+export async function getBlogInfo(forceRefresh = false) {
+  if (!forceRefresh && blogInfoCache) {
+    return blogInfoCache
+  }
+
   const obj = await getObject(getBlogInfoPtr())
   const result = { ptr: obj.ptr }
-  
+
   for (const member of obj.members) {
     if (member.name === 'title') {
       result.title = member.value
@@ -248,8 +256,16 @@ export async function getBlogInfo() {
       result.tagsPtr = member.value
     }
   }
-  
+
+  blogInfoCache = result
   return result
+}
+
+/**
+ * 清除博客信息缓存
+ */
+export function clearBlogInfoCache() {
+  blogInfoCache = null
 }
 
 /**
@@ -388,4 +404,135 @@ export async function getPostsByTag(tagPostsPtr) {
   return set.elements
     .filter(el => el.type === 'ref')
     .map(el => el.value)
+}
+
+// ==================== 批量优化方法 ====================
+
+/**
+ * 批量获取所有文章详情（单次批量请求）
+ * @param {string[]} postPtrs - 文章指针数组
+ * @returns {Promise<Array<{ptr: string, title: string, slug: string, cover: string, tags: string[]}|null>>}
+ */
+export async function batchGetPosts(postPtrs) {
+  if (postPtrs.length === 0) return []
+
+  // 构建批量查询：获取每篇文章的所有成员
+  const operations = postPtrs.flatMap(ptr => [
+    { method: 'GET', path: `/obj/${ptr}` }
+  ])
+
+  const results = await batchOperations(operations, true)
+  if (!results.success) {
+    throw new Error('Failed to batch get posts')
+  }
+
+  // 提取标签集合指针
+  const tagSetPtrs = []
+  const postDetails = results.results.map((result, idx) => {
+    if (result.status !== 200) return null
+
+    const obj = result.body
+    const detail = { ptr: obj.ptr }
+    let tagsPtr = null
+
+    for (const member of obj.members) {
+      if (member.name === 'title') detail.title = member.value
+      else if (member.name === 'slug') detail.slug = member.value
+      else if (member.name === 'cover') detail.cover = member.value
+      else if (member.name === 'tags') tagsPtr = member.value
+    }
+
+    if (tagsPtr) tagSetPtrs.push({ ptr: obj.ptr, tagsPtr })
+    return detail
+  })
+
+  // 批量获取所有标签集合
+  if (tagSetPtrs.length > 0) {
+    const tagOperations = tagSetPtrs.map(t => ({
+      method: 'GET',
+      path: `/set/${t.tagsPtr}`
+    }))
+    const tagResults = await batchOperations(tagOperations, true)
+
+    // 将标签映射回文章
+    if (tagResults.success) {
+      let tagIdx = 0
+      postDetails.forEach((detail) => {
+        if (!detail) return
+        const tagResult = tagResults.results[tagIdx++]
+        if (tagResult.status === 200) {
+          detail.tags = tagResult.body.elements
+            .filter(el => el.type === 'raw')
+            .map(el => el.value)
+        } else {
+          detail.tags = []
+        }
+      })
+    }
+  }
+
+  return postDetails
+}
+
+/**
+ * 批量获取所有标签及其文章数量
+ * @param {string} tagsPtr - 标签集合指针
+ * @returns {Promise<Array<{ptr: string, name: string, postsPtr: string, count: number}>>}
+ */
+export async function batchGetTagsWithCount(tagsPtr) {
+  const set = await getSet(tagsPtr)
+  const tagPtrs = set.elements
+    .filter(el => el.type === 'ref')
+    .map(el => el.value)
+
+  if (tagPtrs.length === 0) return []
+
+  // 批量获取标签信息和文章集合
+  const operations = tagPtrs.flatMap(ptr => [
+    { method: 'GET', path: `/obj/${ptr}/name` },
+    { method: 'GET', path: `/obj/${ptr}/posts` }
+  ])
+
+  const results = await batchOperations(operations, true)
+  if (!results.success) {
+    throw new Error('Failed to batch get tags')
+  }
+
+  // 获取每个标签的文章集合
+  const tagInfos = []
+  const postsSetPtrs = []
+
+  for (let i = 0; i < tagPtrs.length; i++) {
+    const nameResult = results.results[i * 2]
+    const postsResult = results.results[i * 2 + 1]
+
+    const tagInfo = {
+      ptr: tagPtrs[i],
+      name: nameResult.status === 200 ? nameResult.body.value : '',
+      postsPtr: postsResult.status === 200 ? postsResult.body.value : ''
+    }
+    tagInfos.push(tagInfo)
+    if (tagInfo.postsPtr) postsSetPtrs.push(tagInfo.postsPtr)
+  }
+
+  // 批量获取所有标签的文章数量
+  if (postsSetPtrs.length > 0) {
+    const countOperations = postsSetPtrs.map(ptr => ({
+      method: 'GET',
+      path: `/set/${ptr}`
+    }))
+    const countResults = await batchOperations(countOperations, true)
+
+    if (countResults.success) {
+      let countIdx = 0
+      tagInfos.forEach(tagInfo => {
+        const countResult = countResults.results[countIdx++]
+        tagInfo.count = countResult.status === 200
+          ? countResult.body.elements.length
+          : 0
+      })
+    }
+  }
+
+  return tagInfos
 }
