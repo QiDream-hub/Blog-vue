@@ -18,7 +18,7 @@
 
             <div class="footer-section footer-contact">
                 <h4>联系我</h4>
-                <p>📧 email@example.com</p>
+                <a href="mailto:30505023815@qq.com" target="_blank" rel="noopener">📧 邮箱</a>
                 <p>📍 虚拟宇宙 · 开发者星系</p>
             </div>
         </div>
