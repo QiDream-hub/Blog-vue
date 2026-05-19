@@ -41,18 +41,7 @@ export async function healthCheck() {
   return response.json()
 }
 
-// ==================== 对象操作 ====================
-
-/**
- * 创建对象
- * @returns {Promise<{ptr: string}>}
- */
-export async function createObject() {
-  const response = await fetch(`${getApiUrl()}/obj`, {
-    method: 'POST'
-  })
-  return response.json()
-}
+// ==================== 对象操作（只读） ====================
 
 /**
  * 获取完整对象
@@ -88,47 +77,6 @@ export async function getObjectMember(ptr, member) {
 }
 
 /**
- * 设置对象成员值
- * @param {string} ptr - 对象指针
- * @param {string} member - 成员名
- * @param {string} value - 值（原始数据或指针）
- * @returns {Promise<{success: boolean}>}
- */
-export async function setObjectMember(ptr, member, value) {
-  const response = await fetch(`${getApiUrl()}/obj/${ptr}/${member}`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ value })
-  })
-  return response.json()
-}
-
-/**
- * 删除对象成员
- * @param {string} ptr - 对象指针
- * @param {string} member - 成员名
- * @returns {Promise<{success: boolean}>}
- */
-export async function deleteObjectMember(ptr, member) {
-  const response = await fetch(`${getApiUrl()}/obj/${ptr}/${member}`, {
-    method: 'DELETE'
-  })
-  return response.json()
-}
-
-/**
- * 删除完整对象
- * @param {string} ptr - 对象指针
- * @returns {Promise<{success: boolean}>}
- */
-export async function deleteObject(ptr) {
-  const response = await fetch(`${getApiUrl()}/obj/${ptr}`, {
-    method: 'DELETE'
-  })
-  return response.json()
-}
-
-/**
  * 链式查询对象成员
  * @param {string} path - 查询路径（格式：ptr.member1.member2）
  * @returns {Promise<{path: string, value: string, type: string}>}
@@ -141,18 +89,7 @@ export async function queryObjectPath(path) {
   return response.json()
 }
 
-// ==================== 集合操作 ====================
-
-/**
- * 创建集合
- * @returns {Promise<{ptr: string}>}
- */
-export async function createSet() {
-  const response = await fetch(`${getApiUrl()}/set`, {
-    method: 'POST'
-  })
-  return response.json()
-}
+// ==================== 集合操作（只读） ====================
 
 /**
  * 获取完整集合
@@ -170,61 +107,21 @@ export async function getSet(ptr) {
   return response.json()
 }
 
-/**
- * 添加元素到集合
- * @param {string} ptr - 集合指针
- * @param {string} value - 元素值
- * @returns {Promise<{success: boolean}>}
- */
-export async function addSetElement(ptr, value) {
-  const response = await fetch(`${getApiUrl()}/set/${ptr}/elements`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ value })
-  })
-  return response.json()
-}
-
-/**
- * 从集合删除元素
- * @param {string} ptr - 集合指针
- * @param {string} value - 元素值
- * @returns {Promise<{success: boolean}>}
- */
-export async function deleteSetElement(ptr, value) {
-  const response = await fetch(`${getApiUrl()}/set/${ptr}/elements`, {
-    method: 'DELETE',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ value })
-  })
-  return response.json()
-}
-
-/**
- * 删除完整集合
- * @param {string} ptr - 集合指针
- * @returns {Promise<{success: boolean}>}
- */
-export async function deleteSet(ptr) {
-  const response = await fetch(`${getApiUrl()}/set/${ptr}`, {
-    method: 'DELETE'
-  })
-  return response.json()
-}
-
 // ==================== 批量操作 ====================
 
 /**
- * 批量执行操作
- * @param {Array<{method: string, path: string, body?: object}>} operations - 操作列表
- * @param {boolean} readonly - 是否只读事务
+ * 批量执行只读操作（GET /batch）
+ * 
+ * 使用只读事务，仅允许 GET 操作，保证读取一致性
+ * 为了兼容性使用psot方法提交操作列表，在nginx中配置将 POST /batch 转发到 GET /batch
+ * @param {Array<{method: 'GET', path: string}>} operations - 操作列表，仅允许 GET 操作
  * @returns {Promise<{success: boolean, results: Array<{status: number, body: any}>}>}
  */
-export async function batchOperations(operations, readonly = false) {
+export async function batchOperations(operations) {
   const response = await fetch(`${getApiUrl()}/batch`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ readonly, operations })
+    body: JSON.stringify({ operations })
   })
   return response.json()
 }
@@ -335,7 +232,7 @@ export async function findPostBySlug(postsPtr, slug) {
     path: `/obj/${ptr}/slug`
   }))
 
-  const results = await batchOperations(operations, true)
+  const results = await batchOperations(operations)
 
   if (!results.success) {
     throw new Error('Failed to query posts')
@@ -373,7 +270,7 @@ export async function getTagList(tagsPtr) {
     { method: 'GET', path: `/obj/${ptr}/posts` }
   ])
 
-  const results = await batchOperations(operations, true)
+  const results = await batchOperations(operations)
 
   if (!results.success) {
     throw new Error('Failed to query tags')
@@ -421,7 +318,7 @@ export async function batchGetPosts(postPtrs) {
     { method: 'GET', path: `/obj/${ptr}` }
   ])
 
-  const results = await batchOperations(operations, true)
+  const results = await batchOperations(operations)
   if (!results.success) {
     throw new Error('Failed to batch get posts')
   }
@@ -452,7 +349,7 @@ export async function batchGetPosts(postPtrs) {
       method: 'GET',
       path: `/set/${t.tagsPtr}`
     }))
-    const tagResults = await batchOperations(tagOperations, true)
+    const tagResults = await batchOperations(tagOperations)
 
     // 将标签映射回文章
     if (tagResults.success) {
@@ -493,7 +390,7 @@ export async function batchGetTagsWithCount(tagsPtr) {
     { method: 'GET', path: `/obj/${ptr}/posts` }
   ])
 
-  const results = await batchOperations(operations, true)
+  const results = await batchOperations(operations)
   if (!results.success) {
     throw new Error('Failed to batch get tags')
   }
@@ -521,7 +418,7 @@ export async function batchGetTagsWithCount(tagsPtr) {
       method: 'GET',
       path: `/set/${ptr}`
     }))
-    const countResults = await batchOperations(countOperations, true)
+    const countResults = await batchOperations(countOperations)
 
     if (countResults.success) {
       let countIdx = 0
