@@ -14,11 +14,35 @@
 <script setup>
 import { defineProps, computed, nextTick, watch } from 'vue'
 import { marked } from 'marked'
-import hljs from 'highlight.js'
-import 'highlight.js/styles/github-dark.css' // 或 github.css / atom-one-dark 等
+import hljs from 'highlight.js/lib/core'
+import javascript from 'highlight.js/lib/languages/javascript'
+import typescript from 'highlight.js/lib/languages/typescript'
+import python from 'highlight.js/lib/languages/python'
+import java from 'highlight.js/lib/languages/java'
+import go from 'highlight.js/lib/languages/go'
+import bash from 'highlight.js/lib/languages/bash'
+import sql from 'highlight.js/lib/languages/sql'
+import json from 'highlight.js/lib/languages/json'
+import yaml from 'highlight.js/lib/languages/yaml'
+import markdown from 'highlight.js/lib/languages/markdown'
+import xml from 'highlight.js/lib/languages/xml'
+import 'highlight.js/styles/github-dark.css'
 
 // XSS 防护（推荐）
 import DOMPurify from 'dompurify'
+
+// 注册常用语言
+hljs.registerLanguage('javascript', javascript)
+hljs.registerLanguage('typescript', typescript)
+hljs.registerLanguage('python', python)
+hljs.registerLanguage('java', java)
+hljs.registerLanguage('go', go)
+hljs.registerLanguage('bash', bash)
+hljs.registerLanguage('sql', sql)
+hljs.registerLanguage('json', json)
+hljs.registerLanguage('yaml', yaml)
+hljs.registerLanguage('markdown', markdown)
+hljs.registerLanguage('xml', xml)
 
 // 配置 marked
 marked.setOptions({
@@ -29,8 +53,8 @@ marked.setOptions({
         return hljs.highlightAuto(code).value
     },
     langPrefix: 'hljs language-',
-    breaks: true, // 支持换行
-    gfm: true     // GitHub 风格
+    breaks: true,
+    gfm: true
 })
 
 const props = defineProps({

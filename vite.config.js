@@ -2,13 +2,11 @@ import { fileURLToPath, URL } from 'node:url'
 
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
-import vueDevTools from 'vite-plugin-vue-devtools'
 
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [
     vue(),
-    vueDevTools(),
   ],
   resolve: {
     alias: {
@@ -21,5 +19,16 @@ export default defineConfig({
     allowedHosts: [
       "qdream.xyz"
     ],
+  },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'vue-vendor': ['vue', 'vue-router'],
+          'markdown-vendor': ['marked', 'dompurify'],
+          'highlight-vendor': ['highlight.js'],
+        },
+      },
+    },
   },
 })

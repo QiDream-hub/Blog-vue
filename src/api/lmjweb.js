@@ -307,26 +307,31 @@ export async function getPostDetail(ptr) {
  */
 export async function findPostBySlug(postsPtr, slug) {
   const postPtrs = await getAllPostPtrs(postsPtr)
-  
+
+  // 如果没有文章，直接返回 null
+  if (postPtrs.length === 0) {
+    return null
+  }
+
   // 使用批量查询提高效率
   const operations = postPtrs.map(ptr => ({
     method: 'GET',
     path: `/obj/${ptr}/slug`
   }))
-  
+
   const results = await batchOperations(operations, true)
-  
+
   if (!results.success) {
     throw new Error('Failed to query posts')
   }
-  
+
   for (let i = 0; i < results.results.length; i++) {
     const result = results.results[i]
     if (result.status === 200 && result.body.value === slug) {
       return postPtrs[i]
     }
   }
-  
+
   return null
 }
 
@@ -340,31 +345,36 @@ export async function getTagList(tagsPtr) {
   const tagPtrs = set.elements
     .filter(el => el.type === 'ref')
     .map(el => el.value)
-  
+
+  // 如果没有标签，直接返回空数组
+  if (tagPtrs.length === 0) {
+    return []
+  }
+
   // 批量获取标签信息
   const operations = tagPtrs.flatMap(ptr => [
     { method: 'GET', path: `/obj/${ptr}/name` },
     { method: 'GET', path: `/obj/${ptr}/posts` }
   ])
-  
+
   const results = await batchOperations(operations, true)
-  
+
   if (!results.success) {
     throw new Error('Failed to query tags')
   }
-  
+
   const tags = []
   for (let i = 0; i < tagPtrs.length; i++) {
     const nameResult = results.results[i * 2]
     const postsResult = results.results[i * 2 + 1]
-    
+
     tags.push({
       ptr: tagPtrs[i],
       name: nameResult.status === 200 ? nameResult.body.value : '',
       postsPtr: postsResult.status === 200 ? postsResult.body.value : ''
     })
   }
-  
+
   return tags
 }
 
