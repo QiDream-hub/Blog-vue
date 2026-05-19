@@ -37,6 +37,7 @@ import { program } from 'commander'
 import { readFileSync, existsSync } from 'fs'
 import { join, resolve } from 'path'
 import { fileURLToPath } from 'url'
+import path from 'path'
 import Publisher from './publisher.js'
 
 const __filename = fileURLToPath(import.meta.url)
@@ -149,9 +150,11 @@ registerCmd
   .option('--filename <string>', '原始文件名（用于元数据记录）')
   .action(async (options, cmd) => {
     const publisher = createPublisher(cmd.parent.parent.opts().config)
-    
+
     try {
-      const result = await publisher.registerImage(options.file, options.filename)
+      // 解析文件路径：相对于当前工作目录
+      const filePath = path.resolve(process.cwd(), options.file)
+      const result = await publisher.registerImage(filePath, options.filename)
       console.log('✓ 图片注册完成')
       console.log(`  图片指针：${result.ptr}`)
       console.log(`  存储路径：${result.path}`)
@@ -172,10 +175,12 @@ registerCmd
   .option('--filename <string>', '原始文件名（用于元数据记录）')
   .action(async (options, cmd) => {
     const publisher = createPublisher(cmd.parent.parent.opts().config)
-    
+
     try {
+      // 解析文件路径：相对于当前工作目录
+      const filePath = path.resolve(process.cwd(), options.file)
       const result = await publisher.registerArticle({
-        filePath: options.file,
+        filePath,
         title: options.title,
         slug: options.slug,
         filename: options.filename

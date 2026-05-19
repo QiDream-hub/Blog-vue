@@ -332,13 +332,14 @@ export class Publisher {
     const tagsPtr = blogInfo.members.find(m => m.name === 'tags')?.value
     const tagsSet = await this.#getSet(tagsPtr)
 
-    // 查找现有标签
-    for (const ptr of tagsSet.elements || []) {
-      const tagObj = await this.#getObject(ptr)
+    // 查找现有标签（过滤空元素）
+    const elements = (tagsSet.elements || []).filter(e => e.value && e.value.trim())
+    for (const elem of elements) {
+      const tagObj = await this.#getObject(elem.value)
       const nameMember = tagObj.members.find(m => m.name === 'name')
       if (nameMember?.value === name) {
         const tagPostsPtr = tagObj.members.find(m => m.name === 'posts')?.value
-        return { ptr, postsPtr: tagPostsPtr, created: false }
+        return { ptr: elem.value, postsPtr: tagPostsPtr, created: false }
       }
     }
 
