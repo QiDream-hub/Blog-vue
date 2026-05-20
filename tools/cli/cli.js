@@ -38,7 +38,7 @@ import { readFileSync, existsSync } from 'fs'
 import { join, resolve } from 'path'
 import { fileURLToPath } from 'url'
 import path from 'path'
-import Publisher from '../publisher.js'
+import Publisher from './publisher.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = join(__filename, '..')

@@ -73,9 +73,51 @@ location / {
 }
 
 # API 代理
-location /api/ {
-    proxy_pass http://localhost:8080/;
+# 为 /api/batch 单独配置
+location /api/batch {
+    # 允许 GET 和 POST（POST 会被覆写）
+    limit_except GET POST {
+        deny all;
+    }
+        
+    # 核心：将 POST 覆写为 GET
+    proxy_method GET;
+        
+    # 代理到后端
+    proxy_pass http://10.88.0.1:30000/batch;
+        
+    # 重要：保留原始请求体
+    proxy_pass_request_body on;
+        
+    # 标准代理头
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+        
+    # 超时设置
+    proxy_connect_timeout 30s;
+    proxy_send_timeout 30s;
+    proxy_read_timeout 30s;
+        
+    # 禁用缓存
+    add_header Cache-Control "no-cache, no-store, must-revalidate";
 }
+
+    # 其他 API 保持只读
+    location /api/ {
+        limit_except GET {
+            deny all;
+        }
+        
+        proxy_pass http://10.88.0.1:30000/;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        
+        add_header Cache-Control "no-cache, no-store, must-revalidate";
+    }
 
 # 图片服务
 location /img/ {
@@ -105,7 +147,7 @@ location /article/ {
 ┌─────────────────────────────────────────────────────────┐
 │                    博客信息对象                          │
 │  类型：obj (01 开头)                                     │
-│  指针：固定配置在 src/config/blog.js                     │
+│  指针：为方便静态访问直接存储在index.html中                     │
 │  ┌─────────────────────────────────────────────────┐   │
 │  │ members:                                        │   │
 │  │   - title: "博客标题" (raw)                     │   │
@@ -139,20 +181,6 @@ location /article/ {
 │  └─────────────┘  │
 └───────────────────┘
 ```
-
-**API 端点**：
-| 类型 | 端点 | 说明 |
-|------|------|------|
-| 对象 | `POST /obj` | 创建对象 |
-| 对象 | `GET /obj/{ptr}` | 获取完整对象 |
-| 对象 | `GET /obj/{ptr}/{member}` | 获取成员值 |
-| 对象 | `PUT /obj/{ptr}/{member}` | 设置成员值 |
-| 集合 | `POST /set` | 创建集合 |
-| 集合 | `GET /set/{ptr}` | 获取完整集合 |
-| 集合 | `POST /set/{ptr}/elements` | 添加元素 |
-| 批量 | `POST /batch` | 批量操作 |
-
-详细 API 文档：`@doc/lmjcore_web/API_REFERENCE.md`
 
 ---
 
@@ -225,7 +253,7 @@ src/
 1. 用户访问首页
          │
          ▼
-2. Vue 读取配置 (src/config/blog.js)
+2. Vue 读取配置
          │
          ▼
 3. 请求 lmjweb: GET /obj/{BLOG_INFO_PTR}
@@ -240,7 +268,7 @@ src/
          │                    │
          ▼                    ▼
 7. 批量获取文章详情    8. 获取每个标签的文章数
-   GET /obj/{artPtr}         │
+   POST /obj/batch         │
          │                    ▼
          ▼             9. 渲染标签栏
 10. 渲染文章列表
@@ -252,28 +280,21 @@ src/
 ### 文章详情加载流程
 
 ```
-1. 用户访问 /blogs/{slug}
+1. 用户访问 /blogs/{ptr}
          │
          ▼
-2. Vue 根据 slug 查询文章指针
-   POST /batch (批量查询所有文章的 slug)
+2. Vue 根据文章指针请求文章元数据
+    GET /obj/{ptr}
          │
          ▼
-3. 找到匹配的文章指针 {ptr}
-         │
-         ▼
-4. 获取文章元数据
-   GET /obj/{ptr}
-         │
-         ▼
-5. 获取文章内容
+3. 获取文章内容
    GET /article/{ptr} (Nginx 读取文件)
          │
          ▼
-6. Markdown 渲染 + 代码高亮
+4. Markdown 渲染 + 代码高亮
          │
          ▼
-7. 文章页展示完成
+5. 文章页展示完成
 ```
 
 ### 图片加载流程
@@ -346,12 +367,9 @@ src/
 │  内网发布工具    │
 └───────┬─────────┘
         │
-        │ 1. 上传图片 → 生成图片指针 01img...
-        │ 2. 上传文章 → 生成文章指针 01art...
-        │ 3. 写入元数据到 lmjweb
-        │    - 文章对象 (title, slug, cover, tags)
-        │    - 添加到文章集合
-        │    - 添加到标签集合
+        │ 1. 上传图片(向lmjweb写入元数据) → 生成图片指针 01img...
+        │ 2. 上传文章(向lmjweb写入元数据) → 生成文章指针 01art...
+        │ 3. 创建文章与图片的关联
         ▼
 ┌─────────────────────────────────────┐
 │            lmjweb 数据库             │
@@ -407,7 +425,7 @@ src/
 
 ## 配置说明
 
-### src/config/blog.js
+### index.html
 
 | 配置项 | 类型 | 说明 | 示例 |
 |--------|------|------|------|
@@ -426,7 +444,7 @@ src/
 - **Nginx**：支持多节点部署，静态资源可接入 CDN
 - **文件系统**：图片/文章目录可挂载分布式存储
 
-### 功能扩展
+### 功能扩展 (不考虑实现,展示潜力)
 
 - **评论系统**：可新增评论对象集合，关联文章指针
 - **用户系统**：可新增用户对象集合，实现作者关联
