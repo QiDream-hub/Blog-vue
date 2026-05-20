@@ -1,5 +1,4 @@
 {
-  "$schema": "./config.schema.json",
   "lmjwebApi": "http://192.168.100.5:30000",
   "blogInfoPtr": "01b77b0f6cfd894d738585edef83a8b824",
   "imagesDir": "./images",

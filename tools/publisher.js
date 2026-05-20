@@ -240,21 +240,19 @@ export class Publisher {
   /**
    * 注册文章
    * 在 lmjweb 中创建文章对象，并将文件移动到 articlesDir/{articlePtr}
-   * 
+   *
    * @param {{
    *   filePath: string,
    *   title: string,
-   *   slug: string,
    *   filename?: string
    * }} options 注册选项
    * @returns {Promise<{
    *   ptr: string,
    *   path: string,
-   *   title: string,
-   *   slug: string
+   *   title: string
    * }>}
    */
-  async registerArticle({ filePath, title, slug, filename }) {
+  async registerArticle({ filePath, title, filename }) {
     if (!this.#fileExists(filePath)) {
       throw new Error(`文件不存在：${filePath}`)
     }
@@ -267,7 +265,6 @@ export class Publisher {
 
     // 设置文章元数据
     await this.#setMember(articlePtr, 'title', title, 'raw')
-    await this.#setMember(articlePtr, 'slug', slug, 'raw')
     await this.#setMember(articlePtr, 'tags', articleTagsPtr, 'ref')
 
     // 移动文件到 articlesDir/{articlePtr}
@@ -276,8 +273,7 @@ export class Publisher {
     return {
       ptr: articlePtr,
       path: destPath,
-      title,
-      slug
+      title
     }
   }
 

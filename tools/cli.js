@@ -171,7 +171,6 @@ registerCmd
   .description('注册文章')
   .requiredOption('--file <path>', '文章文件路径')
   .requiredOption('--title <string>', '文章标题')
-  .requiredOption('--slug <string>', '文章 slug')
   .option('--filename <string>', '原始文件名（用于元数据记录）')
   .action(async (options, cmd) => {
     const publisher = createPublisher(cmd.parent.parent.opts().config)
@@ -182,14 +181,12 @@ registerCmd
       const result = await publisher.registerArticle({
         filePath,
         title: options.title,
-        slug: options.slug,
         filename: options.filename
       })
       console.log('✓ 文章注册完成')
       console.log(`  文章指针：${result.ptr}`)
       console.log(`  存储路径：${result.path}`)
       console.log(`  标题：${result.title}`)
-      console.log(`  Slug: ${result.slug}`)
     } catch (err) {
       console.error('✗ 注册失败:', err.message)
       process.exit(1)

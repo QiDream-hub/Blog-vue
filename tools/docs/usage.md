@@ -59,7 +59,7 @@ npm run pub init --title "我的博客"
 npm run pub register image --file "./cover.jpg" --filename "article-cover.jpg"
 
 # 注册文章
-npm run pub register article --file "./article.md" --title "文章标题" --slug "my-article"
+npm run pub register article --file "./article.md" --title "文章标题"
 ```
 
 #### 创建关联
@@ -142,15 +142,13 @@ console.log(cover)
 // 注册文章
 const article = await publisher.registerArticle({
   filePath: './article.md',
-  title: '文章标题',
-  slug: 'my-article'
+  title: '文章标题'
 })
 console.log(article)
 // {
 //   ptr: '01art456...',
 //   path: '/var/www/articles/01art456...',
-//   title: '文章标题',
-//   slug: 'my-article'
+//   title: '文章标题'
 // }
 ```
 
@@ -204,24 +202,23 @@ import { Publisher } from './tools/publisher.js'
 
 async function publishArticle() {
   const publisher = new Publisher(config)
-  
+
   // 1. 注册文章
   const article = await publisher.registerArticle({
     filePath: './drafts/post.md',
-    title: '我的文章',
-    slug: 'my-post'
+    title: '我的文章'
   })
   console.log('文章指针:', article.ptr)
-  
+
   // 2. 注册封面
   const cover = await publisher.registerImage('./images/cover.jpg')
   console.log('封面指针:', cover.ptr)
-  
+
   // 3. 创建关联
   await publisher.linkCover(article.ptr, cover.ptr)
   await publisher.linkTags(article.ptr, ['技术', '随笔'])
   await publisher.linkToBlog(article.ptr)
-  
+
   console.log('发布完成!')
   return article
 }
@@ -250,17 +247,16 @@ async function batchImport() {
     
     // 解析 Frontmatter
     const { data } = matter(content)
-    const { title, slug, tags, cover } = data
-    
+    const { title, tags, cover } = data
+
     // 写入临时文件（去除 frontmatter）
     const tempPath = `./temp/${file}`
     await writeFile(tempPath, content)
-    
+
     // 注册文章
     const article = await publisher.registerArticle({
       filePath: tempPath,
-      title,
-      slug
+      title
     })
     
     // 注册封面
@@ -290,14 +286,12 @@ async function batchImport() {
 
 ARTICLE_FILE="$1"
 TITLE="$2"
-SLUG="$3"
-COVER_FILE="$4"
+COVER_FILE="$3"
 
 # 注册文章
 ARTICLE_RESULT=$(npm run pub --silent register article \
   --file "$ARTICLE_FILE" \
-  --title "$TITLE" \
-  --slug "$SLUG")
+  --title "$TITLE")
 
 ARTICLE_PTR=$(echo "$ARTICLE_RESULT" | grep "文章指针" | awk '{print $2}')
 

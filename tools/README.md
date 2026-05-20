@@ -27,7 +27,7 @@ npm run pub health
 ```bash
 # 注册文件
 npm run pub register image --file "./cover.jpg"
-npm run pub register article --file "./post.md" --title "标题" --slug "my-article"
+npm run pub register article --file "./post.md" --title "标题"
 
 # 创建关联
 npm run pub link cover --article "01art..." --image "01img..."

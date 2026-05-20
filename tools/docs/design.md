@@ -74,10 +74,9 @@ const cover = await publisher.registerImage('./cover.jpg', 'article-cover.jpg')
 // 注册文章
 const article = await publisher.registerArticle({
   filePath: './article.md',
-  title: '文章标题',
-  slug: 'my-article'
+  title: '文章标题'
 })
-// → { ptr: '01art...', path: '/var/www/articles/01art...', title, slug }
+// → { ptr: '01art...', path: '/var/www/articles/01art...', title }
 ```
 
 ### 2. 创建关联 (Link)
@@ -105,7 +104,6 @@ await publisher.linkToBlog(articlePtr)
 
 文章对象 (01art...)
 ├─ title: "文章标题"
-├─ slug: "url-slug"
 ├─ cover: 01img... (封面图片指针，可选)
 └─ tags: 02arttags... (set - 标签名集合)
 
@@ -147,7 +145,7 @@ location /article/ {
 
 ```bash
 # 1. 注册文章
-npm run pub register article --file "./post.md" --title "标题" --slug "my-article"
+npm run pub register article --file "./post.md" --title "标题"
 
 # 2. 注册封面
 npm run pub register image --file "./cover.jpg"
