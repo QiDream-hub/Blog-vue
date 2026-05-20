@@ -19,7 +19,7 @@ const router = createRouter({
       component: About
     },
     {
-      path: '/blogs/:slug',
+      path: '/blogs/:ptr',
       component: Blog,
       props: true
 

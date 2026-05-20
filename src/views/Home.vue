@@ -76,7 +76,7 @@ const loadData = async () => {
         // 2. 获取所有文章指针
         const postPtrs = await getAllPostPtrs(blogInfo.postsPtr)
 
-        // 3. 批量获取所有文章详情（优化：单次批量请求）
+        // 3. 批量获取所有文章详情
         const postDetails = await batchGetPosts(postPtrs)
 
         // 4. 过滤失败的文章，添加图片 URL
@@ -86,7 +86,7 @@ const loadData = async () => {
                 ...post,
                 id: post.ptr,
                 cover: getImageUrl(post.cover),
-                to: `/blogs/${post.slug}`
+                to: `/blogs/${post.ptr}`
             }))
 
         // 5. 批量获取标签列表及文章数量（优化：单次批量请求）

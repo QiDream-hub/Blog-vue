@@ -15,15 +15,8 @@
 import BlogPostView from '@/components/BlogPostView.vue'
 import { ref, watch, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { getBlogInfo, getAllPostPtrs, findPostBySlug, getPostDetail } from '@/api/lmjweb'
+import { getPostDetail } from '@/api/lmjweb'
 import { getArticleUrl, getImageUrl } from '@/config/blog'
-
-const props = defineProps({
-    slug: {
-        type: String,
-        default: ""
-    }
-})
 
 const route = useRoute()
 const router = useRouter()
@@ -33,32 +26,26 @@ const loading = ref(true)
 const loadPost = async () => {
     loading.value = true
     post.value = null
-    
+
     try {
-        const slug = route.params.slug
-        
-        // 1. 获取博客信息
-        const blogInfo = await getBlogInfo()
-        
-        // 2. 根据 slug 查找文章指针
-        const postPtr = await findPostBySlug(blogInfo.postsPtr, slug)
-        
-        if (!postPtr) {
+        const ptr = route.params.ptr
+
+        if (!ptr) {
             router.replace('/error/blog/not-found')
             return
         }
-        
-        // 3. 获取文章详情
-        const postDetail = await getPostDetail(postPtr)
-        
-        // 4. 从 Nginx 获取文章内容
-        const contentResponse = await fetch(getArticleUrl(postPtr))
+
+        // 1. 获取文章详情
+        const postDetail = await getPostDetail(ptr)
+
+        // 2. 从 Nginx 获取文章内容
+        const contentResponse = await fetch(getArticleUrl(ptr))
         if (!contentResponse.ok) {
             throw new Error('文章内容加载失败')
         }
         const content = await contentResponse.text()
-        
-        // 5. 组装完整文章数据
+
+        // 3. 组装完整文章数据
         post.value = {
             title: postDetail.title,
             content: content,
@@ -76,7 +63,7 @@ const loadPost = async () => {
 
 // 监听路由变化重新加载
 watch(
-    () => route.params.slug,
+    () => route.params.ptr,
     () => loadPost()
 )
 

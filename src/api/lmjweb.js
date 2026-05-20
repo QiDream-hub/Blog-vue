@@ -112,8 +112,7 @@ export async function getSet(ptr) {
 /**
  * 批量执行只读操作（GET /batch）
  * 
- * 使用只读事务，仅允许 GET 操作，保证读取一致性
- * 为了兼容性使用psot方法提交操作列表，在nginx中配置将 POST /batch 转发到 GET /batch
+ * 使用只读事务，仅允许 GET 操作，保证读取一致性.为了兼容性使用psot方法提交操作列表，在nginx中配置将 POST /batch 转发到 GET /batch
  * @param {Array<{method: 'GET', path: string}>} operations - 操作列表，仅允许 GET 操作
  * @returns {Promise<{success: boolean, results: Array<{status: number, body: any}>}>}
  */
@@ -210,42 +209,6 @@ export async function getPostDetail(ptr) {
   }
   
   return result
-}
-
-/**
- * 根据 slug 查找文章指针
- * @param {string} postsPtr - 文章集合指针
- * @param {string} slug - 文章 slug
- * @returns {Promise<string|null>} 文章指针，未找到返回 null
- */
-export async function findPostBySlug(postsPtr, slug) {
-  const postPtrs = await getAllPostPtrs(postsPtr)
-
-  // 如果没有文章，直接返回 null
-  if (postPtrs.length === 0) {
-    return null
-  }
-
-  // 使用批量查询提高效率
-  const operations = postPtrs.map(ptr => ({
-    method: 'GET',
-    path: `/obj/${ptr}/slug`
-  }))
-
-  const results = await batchOperations(operations)
-
-  if (!results.success) {
-    throw new Error('Failed to query posts')
-  }
-
-  for (let i = 0; i < results.results.length; i++) {
-    const result = results.results[i]
-    if (result.status === 200 && result.body.value === slug) {
-      return postPtrs[i]
-    }
-  }
-
-  return null
 }
 
 /**
