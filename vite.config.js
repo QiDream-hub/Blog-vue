@@ -30,5 +30,14 @@ export default defineConfig({
         },
       },
     },
+    // 启用更激进代码分割
+    minify: 'esbuild',
+    cssCodeSplit: true,
+    // 调整 chunk 大小警告限制
+    chunkSizeWarningLimit: 500,
+  },
+  // 优化 esbuild 打包
+  esbuild: {
+    drop: process.env.NODE_ENV === 'production' ? ['console', 'debugger'] : [],
   },
 })

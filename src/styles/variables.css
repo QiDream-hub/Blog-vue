@@ -40,4 +40,18 @@
   --transition-base: all 0.3s ease;
   --transition-shadow: box-shadow 0.3s ease;
   --transition-transform: transform 0.3s ease;
+
+  /* --- 错误状态配色 --- */
+  --error-color: #ef4444;
+  --error-bg-color: rgba(239, 68, 68, 0.1);
+  --error-border-color: rgba(239, 68, 68, 0.2);
+  --error-text-color: #dc2626;
+  --warning-color: #f59e0b;
+  --warning-bg-color: rgba(245, 158, 11, 0.1);
+  --warning-border-color: rgba(245, 158, 11, 0.2);
+  --warning-text-color: #d97706;
+  --success-color: #10b981;
+  --success-bg-color: rgba(16, 185, 129, 0.1);
+  --success-border-color: rgba(16, 185, 129, 0.2);
+  --success-text-color: #059669;
 }

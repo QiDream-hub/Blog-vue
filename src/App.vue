@@ -1,4 +1,7 @@
-<script setup></script>
+<script setup>
+import AppFooter from './components/Footer.vue'
+import AppHader from './components/Header.vue'
+</script>
 
 <template>
   <div id="app" class="app-layout">

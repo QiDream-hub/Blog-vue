@@ -1,11 +1,8 @@
 <template>
     <div class="blog-post-container">
         <!-- 加载状态 -->
-        <div v-if="loading" class="loading-container">
-            <div class="loading-spinner"></div>
-            <p>加载文章中...</p>
-        </div>
-        
+        <LoadingSpinner v-if="loading" message="加载文章中..." />
+
         <!-- 文章内容 -->
         <BlogPostView v-else-if="post" v-bind="post" />
     </div>
@@ -13,6 +10,7 @@
 
 <script setup>
 import BlogPostView from '@/components/BlogPostView.vue'
+import LoadingSpinner from '@/components/LoadingSpinner.vue'
 import { ref, watch, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { getPostDetail } from '@/api/lmjweb'
@@ -76,29 +74,5 @@ onMounted(() => {
 .blog-post-container {
     min-height: 60vh;
     position: relative;
-}
-
-.loading-container {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 60px 20px;
-    text-align: center;
-    min-height: 400px;
-}
-
-.loading-spinner {
-    width: 40px;
-    height: 40px;
-    border: 4px solid var(--border-color);
-    border-top-color: var(--primary-color);
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
-    margin-bottom: 16px;
-}
-
-@keyframes spin {
-    to { transform: rotate(360deg); }
 }
 </style>

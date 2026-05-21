@@ -3,22 +3,19 @@
         <!-- 左侧：搜索 + 博客卡片 -->
         <div class="content-column">
             <!-- 加载状态 -->
-            <div v-if="loading" class="loading-container">
-                <div class="loading-spinner"></div>
-                <p>加载中...</p>
-            </div>
-            
+            <LoadingSpinner v-if="loading" message="加载中..." />
+
             <!-- 正常内容 -->
             <template v-else>
                 <div class="search-container">
                     <input type="text" v-model="searchText" placeholder="搜索标题或摘要..." />
                 </div>
                 <transition-group name="blog-list" tag="div" class="posts-grid">
-                    <BlogCard 
-                        v-for="post in filteredPosts" 
-                        :key="post.ptr" 
-                        v-bind="post" 
-                        class="blog-card" 
+                    <BlogCard
+                        v-for="post in filteredPosts"
+                        :key="post.ptr"
+                        v-bind="post"
+                        class="blog-card"
                     />
                 </transition-group>
             </template>
@@ -27,18 +24,16 @@
         <!-- 右侧：标签栏 -->
         <div class="sidebar-column">
             <!-- 标签加载状态 -->
-            <div v-if="tagsLoading" class="tags-loading">
-                <p>加载标签...</p>
-            </div>
-            
+            <LoadingSpinner v-if="tagsLoading" message="加载标签..." />
+
             <div v-else class="tags-container">
-                <TagCard 
-                    v-for="tag in tags" 
-                    :key="tag.ptr" 
-                    :name="tag.name" 
+                <TagCard
+                    v-for="tag in tags"
+                    :key="tag.ptr"
+                    :name="tag.name"
                     :count="tag.count"
                     @click="addOrDelTag(tag.name)"
-                    :class="{ 'tag-card--selected': searchTag.includes(tag.name) }" 
+                    :class="{ 'tag-card--selected': searchTag.includes(tag.name) }"
                 />
             </div>
         </div>
@@ -48,6 +43,7 @@
 <script setup>
 import BlogCard from '@/components/BlogCard.vue'
 import TagCard from '@/components/TagCard.vue'
+import LoadingSpinner from '@/components/LoadingSpinner.vue'
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import {
@@ -169,36 +165,6 @@ input {
     background-color: var(--bg-color);
     transition: var(--transition-bg-color);
     color: var(--text-color);
-}
-
-/* --- 加载状态 --- */
-.loading-container {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 60px 20px;
-    text-align: center;
-}
-
-.loading-spinner {
-    width: 40px;
-    height: 40px;
-    border: 4px solid var(--border-color);
-    border-top-color: var(--primary-color);
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
-    margin-bottom: 16px;
-}
-
-@keyframes spin {
-    to { transform: rotate(360deg); }
-}
-
-.tags-loading {
-    text-align: center;
-    padding: 20px;
-    color: var(--description-color);
 }
 
 /* --- 卡片网格 --- */
