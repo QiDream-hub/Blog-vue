@@ -299,14 +299,14 @@ function addCopyButtons() {
 
             const button = document.createElement('button')
             button.className = 'copy-code-button'
-            button.textContent = '📋 Copy'
+            button.innerHTML = `${COPY_ICON} Copy`
 
             button.onclick = async () => {
                 const code = pre.querySelector('code')?.innerText || ''
                 try {
                     await navigator.clipboard.writeText(code)
-                    button.textContent = '✅ Copied!'
-                    setTimeout(() => { button.textContent = '📋 Copy' }, 1500)
+                    button.innerHTML = `${CHECK_ICON} Copied!`
+                    setTimeout(() => { button.innerHTML = `${COPY_ICON} Copy` }, 1500)
                 } catch (err) {
                     console.warn('Failed to copy:', err)
                 }
@@ -344,11 +344,101 @@ async function renderMermaidDiagrams() {
                 bindFunctions(block)
             }
             block.classList.add('mermaid-rendered')
+            // 添加切换按钮
+            addMermaidToggleButtons(block, decodeURIComponent(graphDefinition))
         } catch (error) {
             console.error('Mermaid render error:', error)
             block.innerHTML = `<div class="mermaid-error">图表渲染失败：${error.message}</div>`
         }
     }
+}
+
+// SVG 图标
+const CODE_ICON = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>`
+const CHART_ICON = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>`
+const COPY_ICON = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>`
+const CHECK_ICON = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>`
+
+// 为 Mermaid 图表添加切换按钮
+function addMermaidToggleButtons(block, graphDefinition) {
+    // 检查是否已存在按钮
+    if (block.querySelector('.mermaid-toggle-button')) return
+
+    const button = document.createElement('button')
+    button.className = 'mermaid-toggle-button'
+    button.innerHTML = `${CODE_ICON} 查看代码`
+    button.dataset.viewMode = 'graph' // 'graph' 或 'code'
+
+    button.onclick = () => {
+        const isGraphView = button.dataset.viewMode === 'graph'
+
+        if (isGraphView) {
+            // 切换到代码视图
+            const pre = document.createElement('pre')
+            pre.className = 'mermaid-code-view'
+            pre.innerHTML = `<code class="language-mermaid">${escapeHtml(graphDefinition)}</code>`
+
+            // 保存原始 SVG 内容
+            block.dataset.originalSvg = block.innerHTML
+
+            // 替换为代码视图
+            block.innerHTML = ''
+            block.appendChild(pre)
+            block.appendChild(button)
+
+            // 更新按钮文本
+            button.innerHTML = `${CHART_ICON} 查看图表`
+            button.dataset.viewMode = 'code'
+
+            // 为代码块添加复制按钮
+            addCopyButtonToElement(pre, graphDefinition)
+        } else {
+            // 切换回图表视图 - 直接使用保存的 SVG，避免重复渲染
+            block.innerHTML = block.dataset.originalSvg
+            block.classList.add('mermaid-rendered')
+
+            // 重新添加切换按钮
+            const oldButton = block.querySelector('.mermaid-toggle-button')
+            if (oldButton) {
+                oldButton.remove()
+            }
+            addMermaidToggleButtons(block, graphDefinition)
+
+            // 更新按钮文本
+            // 按钮已重新创建，无需更新
+        }
+    }
+
+    block.appendChild(button)
+}
+
+// HTML 转义辅助函数
+function escapeHtml(text) {
+    const div = document.createElement('div')
+    div.textContent = text
+    return div.innerHTML
+}
+
+// 为指定元素添加复制按钮
+function addCopyButtonToElement(element, textContent) {
+    if (element.querySelector('.copy-code-button')) return
+
+    const button = document.createElement('button')
+    button.className = 'copy-code-button'
+    button.innerHTML = `${COPY_ICON} Copy`
+
+    button.onclick = async () => {
+        try {
+            await navigator.clipboard.writeText(textContent)
+            button.innerHTML = `${CHECK_ICON} Copied!`
+            setTimeout(() => { button.innerHTML = `${COPY_ICON} Copy` }, 1500)
+        } catch (err) {
+            console.warn('Failed to copy:', err)
+        }
+    }
+
+    element.style.position = 'relative'
+    element.appendChild(button)
 }
 
 // 主题变化时重新渲染 Mermaid 图表
@@ -488,6 +578,14 @@ onMounted(() => {
             cursor: pointer;
             z-index: 1;
             transition: var(--transition-bg-color);
+            display: flex;
+            align-items: center;
+            gap: 4px;
+
+            svg {
+                width: 14px;
+                height: 14px;
+            }
         }
 
         .copy-code-button:hover {
@@ -564,12 +662,26 @@ onMounted(() => {
         border: 1px solid var(--border-light-color);
         padding: 0.7rem;
         text-align: left;
+        /* 允许长单词和 URL 换行 */
+        word-wrap: break-word;
+        word-break: break-word;
+        white-space: normal;
+        /* 设置最小宽度，避免内容被过度压缩 */
+        min-width: 100px;
+        /* 最大宽度限制，配合 overflow-wrap 确保换行 */
+        max-width: 300px;
+        overflow-wrap: break-word;
     }
 
     th {
         background-color: var(--selected-bg-color);
         color: var(--secondary-color);
         font-weight: 600;
+        /* 表头同样需要换行支持 */
+        word-wrap: break-word;
+        word-break: break-word;
+        white-space: normal;
+        overflow-wrap: break-word;
     }
 
     img {
@@ -605,6 +717,7 @@ onMounted(() => {
         box-shadow: var(--shadow-sm);
         overflow: auto;
         transition: var(--transition-bg-color);
+        position: relative;
 
         svg {
             max-width: 100%;
@@ -619,6 +732,59 @@ onMounted(() => {
             border: 1px solid var(--border-light-color);
             box-shadow: none;
             padding: 1.2rem;
+        }
+
+        // 切换按钮样式
+        .mermaid-toggle-button {
+            position: absolute;
+            top: 10px;
+            right: 70px; // 在复制按钮左侧
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 5px 10px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            z-index: 2;
+            transition: var(--transition-bg-color);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+
+            svg {
+                width: 16px;
+                height: 16px;
+            }
+
+            &:hover {
+                background: var(--selected-color);
+            }
+        }
+
+        // 代码视图时的复制按钮位置调整
+        .mermaid-code-view .copy-code-button {
+            top: 5px;
+            right: 5px;
+        }
+
+        // 代码视图样式
+        .mermaid-code-view {
+            background-color: var(--bg-secondary-color);
+            border-radius: 6px;
+            padding: 1rem;
+            overflow: auto;
+            max-width: 100%;
+            text-align: left;
+
+            code {
+                display: block;
+                white-space: pre;
+                font-family: 'SFMono-Regular', Consolas, monospace;
+                font-size: 0.85rem;
+                line-height: 1.5;
+                color: var(--text-color);
+            }
         }
     }
 
