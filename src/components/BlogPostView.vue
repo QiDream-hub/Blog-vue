@@ -265,14 +265,16 @@ async function loadHighlightJs() {
         import('highlight.js/lib/languages/json'),
         import('highlight.js/lib/languages/yaml'),
         import('highlight.js/lib/languages/markdown'),
-        import('highlight.js/lib/languages/xml')
+        import('highlight.js/lib/languages/xml'),
+        import('highlight.js/lib/languages/cpp'),
+        import('highlight.js/lib/languages/lua'),
     ])
-    
-    const langNames = ['javascript', 'typescript', 'python', 'java', 'go', 'bash', 'sql', 'json', 'yaml', 'markdown', 'xml']
+
+    const langNames = ['javascript', 'typescript', 'python', 'java', 'go', 'bash', 'sql', 'json', 'yaml', 'markdown', 'xml', 'cpp', 'lua']
     langNames.forEach((name, i) => {
         hljs.registerLanguage(name, languages[i + 1].default)
     })
-    
+
     return hljs
 }
 
@@ -431,9 +433,12 @@ function addCopyButtonToElement(element, textContent) {
         try {
             await navigator.clipboard.writeText(textContent)
             button.innerHTML = `${CHECK_ICON} Copied!`
-            setTimeout(() => { button.innerHTML = `${COPY_ICON} Copy` }, 1500)
+            setTimeout(() => {
+                button.innerHTML = `${COPY_ICON} Copy`
+            }, 1500)
         } catch (err) {
             console.warn('Failed to copy:', err)
+            button.innerHTML = `${COPY_ICON} Copy`
         }
     }
 
@@ -478,12 +483,12 @@ function observeThemeChanges() {
     const observer = new MutationObserver(() => {
         reRenderMermaidOnThemeChange()
     })
-    
+
     observer.observe(document.documentElement, {
         attributes: true,
         attributeFilter: ['style']
     })
-    
+
     // 同时监听 storage 事件（用于多标签页同步）
     window.addEventListener('storage', (e) => {
         if (e.key === 'app-theme') {
@@ -737,8 +742,8 @@ onMounted(() => {
         // 切换按钮样式
         .mermaid-toggle-button {
             position: absolute;
-            top: 10px;
-            right: 70px; // 在复制按钮左侧
+            top: 5px;
+            right: 90px;
             background: var(--primary-color);
             color: white;
             border: none;
