@@ -518,6 +518,16 @@ onMounted(() => {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     color: var(--text-color);
     transition: var(--transition-bg-color);
+
+    // 小屏优化
+    @media (max-width: 768px) {
+        padding: 0 1rem;
+        margin: 1rem auto;
+    }
+
+    @media (max-width: 480px) {
+        padding: 0 0.75rem;
+    }
 }
 
 .blog-title {
@@ -527,6 +537,16 @@ onMounted(() => {
     text-align: center;
     margin-bottom: 1.2rem;
     letter-spacing: -0.5px;
+
+    // 小屏字体适配
+    @media (max-width: 768px) {
+        font-size: 1.8rem;
+    }
+
+    @media (max-width: 480px) {
+        font-size: 1.5rem;
+        letter-spacing: 0;
+    }
 }
 
 .blog-tags {
@@ -535,6 +555,11 @@ onMounted(() => {
     gap: 0.6rem;
     margin-bottom: 2rem;
     flex-wrap: wrap;
+
+    @media (max-width: 480px) {
+        gap: 0.4rem;
+        margin-bottom: 1.5rem;
+    }
 }
 
 .tag {
@@ -551,6 +576,12 @@ onMounted(() => {
         background-color: var(--hover-bg-color);
         transform: translateY(-1px);
     }
+
+    // 小屏标签字体缩小
+    @media (max-width: 480px) {
+        font-size: 0.8rem;
+        padding: 0.25rem 0.6rem;
+    }
 }
 
 /* Markdown 内容区域 */
@@ -558,6 +589,16 @@ onMounted(() => {
     color: var(--text-color);
     line-height: 1.7;
     font-size: 1.05rem;
+
+    // 小屏字体适配
+    @media (max-width: 768px) {
+        font-size: 1rem;
+    }
+
+    @media (max-width: 480px) {
+        font-size: 0.95rem;
+        line-height: 1.6;
+    }
 
     pre {
         position: relative;
@@ -569,6 +610,13 @@ onMounted(() => {
         margin: 1.2rem 0;
         box-shadow: var(--shadow-sm);
         transition: var(--transition-bg-color);
+
+        // 小屏 padding 调整
+        @media (max-width: 480px) {
+            padding: 0.8rem !important;
+            margin: 0.8rem 0;
+            border-radius: 8px;
+        }
 
         .copy-code-button {
             position: absolute;
@@ -590,6 +638,19 @@ onMounted(() => {
             svg {
                 width: 14px;
                 height: 14px;
+            }
+
+            // 小屏按钮简化
+            @media (max-width: 480px) {
+                padding: 4px 8px;
+                font-size: 0.75rem;
+                top: 6px;
+                right: 6px;
+
+                // 小屏只显示图标
+                span {
+                    display: none;
+                }
             }
         }
 
@@ -615,12 +676,35 @@ onMounted(() => {
         border-bottom: 2px solid var(--border-light-color);
         padding-bottom: 0.3em;
         font-size: 1.8rem;
+
+        @media (max-width: 768px) {
+            font-size: 1.5rem;
+        }
+
+        @media (max-width: 480px) {
+            font-size: 1.3rem;
+        }
     }
 
     h2 {
         font-size: 1.5rem;
         border-left: 4px solid var(--secondary-color);
         padding-left: 0.6em;
+
+        @media (max-width: 768px) {
+            font-size: 1.3rem;
+        }
+
+        @media (max-width: 480px) {
+            font-size: 1.2rem;
+            padding-left: 0.4em;
+        }
+    }
+
+    h3 {
+        @media (max-width: 480px) {
+            font-size: 1.1rem;
+        }
     }
 
     a {
@@ -642,6 +726,11 @@ onMounted(() => {
         color: var(--text-secondary-color);
         font-style: italic;
         border-radius: 0 6px 6px 0;
+
+        @media (max-width: 480px) {
+            padding: 0.7rem 1rem;
+            margin: 1rem 0;
+        }
     }
 
     code {
@@ -651,6 +740,11 @@ onMounted(() => {
         border-radius: 4px;
         font-family: 'SFMono-Regular', Consolas, monospace;
         font-size: 0.95em;
+
+        @media (max-width: 480px) {
+            font-size: 0.85em;
+            padding: 0.15em 0.3em;
+        }
     }
 
     table {
@@ -660,6 +754,14 @@ onMounted(() => {
         border-radius: 8px;
         overflow: hidden;
         box-shadow: var(--shadow-sm);
+
+        // 小屏表格滚动
+        @media (max-width: 480px) {
+            display: block;
+            overflow-x: auto;
+            white-space: nowrap;
+            -webkit-overflow-scrolling: touch;
+        }
     }
 
     th,
@@ -676,6 +778,13 @@ onMounted(() => {
         /* 最大宽度限制，配合 overflow-wrap 确保换行 */
         max-width: 300px;
         overflow-wrap: break-word;
+
+        // 小屏表格单元格优化
+        @media (max-width: 480px) {
+            padding: 0.5rem;
+            font-size: 0.85rem;
+            min-width: 80px;
+        }
     }
 
     th {
@@ -687,6 +796,11 @@ onMounted(() => {
         word-break: break-word;
         white-space: normal;
         overflow-wrap: break-word;
+
+        @media (max-width: 480px) {
+            padding: 0.5rem;
+            font-size: 0.85rem;
+        }
     }
 
     img {
@@ -700,14 +814,26 @@ onMounted(() => {
     ol {
         padding-left: 1.4rem;
         margin: 1rem 0;
+
+        @media (max-width: 480px) {
+            padding-left: 1rem;
+        }
     }
 
     li {
         margin-bottom: 0.4rem;
+
+        @media (max-width: 480px) {
+            margin-bottom: 0.3rem;
+        }
     }
 
     p {
         margin: 1rem 0;
+
+        @media (max-width: 480px) {
+            margin: 0.8rem 0;
+        }
     }
 
     /* Mermaid 图表样式 */
@@ -724,6 +850,12 @@ onMounted(() => {
         transition: var(--transition-bg-color);
         position: relative;
 
+        // 小屏 Mermaid 优化
+        @media (max-width: 480px) {
+            padding: 0.8rem;
+            margin: 1rem 0;
+        }
+
         svg {
             max-width: 100%;
             height: auto;
@@ -737,6 +869,10 @@ onMounted(() => {
             border: 1px solid var(--border-light-color);
             box-shadow: none;
             padding: 1.2rem;
+
+            @media (max-width: 480px) {
+                padding: 0.8rem;
+            }
         }
 
         // 切换按钮样式
@@ -765,12 +901,29 @@ onMounted(() => {
             &:hover {
                 background: var(--selected-color);
             }
+
+            // 小屏按钮优化 - 动态定位避免重叠
+            @media (max-width: 480px) {
+                right: 5px;
+                padding: 4px 8px;
+                font-size: 0.75rem;
+
+                // 小屏只显示图标
+                span {
+                    display: none;
+                }
+            }
         }
 
         // 代码视图时的复制按钮位置调整
         .mermaid-code-view .copy-code-button {
             top: 5px;
             right: 5px;
+
+            @media (max-width: 480px) {
+                padding: 4px 6px;
+                font-size: 0.7rem;
+            }
         }
 
         // 代码视图样式
@@ -790,6 +943,11 @@ onMounted(() => {
                 line-height: 1.5;
                 color: var(--text-color);
             }
+
+            @media (max-width: 480px) {
+                padding: 0.8rem;
+                font-size: 0.75rem;
+            }
         }
     }
 
@@ -803,6 +961,11 @@ onMounted(() => {
         font-size: 0.9rem;
         width: 100%;
         text-align: center;
+
+        @media (max-width: 480px) {
+            padding: 0.8rem;
+            font-size: 0.8rem;
+        }
     }
 
     .mermaid-loading {
@@ -810,6 +973,11 @@ onMounted(() => {
         font-style: italic;
         padding: 2rem;
         text-align: center;
+
+        @media (max-width: 480px) {
+            padding: 1.5rem;
+            font-size: 0.9rem;
+        }
     }
 }
 </style>

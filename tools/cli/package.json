@@ -16,5 +16,8 @@
     "lmjweb"
   ],
   "author": "",
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies": {
+    "commander": "^14.0.3"
+  }
 }

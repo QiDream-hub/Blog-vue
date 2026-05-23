@@ -4,52 +4,38 @@
 
 本项目采用三层架构设计，实现前后端分离、只读展示的博客系统。
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                        用户层                               │
-│                    (浏览器访问)                              │
-└─────────────────────────────────────────────────────────────┘
-                            │
-                            ▼
-┌─────────────────────────────────────────────────────────────┐
-│                      Nginx 层                               │
-│  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────┐ │
-│  │  反向代理        │  │  静态资源        │  │  文件读取    │ │
-│  │  /api/* →       │  │  /img/* →       │  │  /article/* │ │
-│  │  lmjweb:8080    │  │  图片目录        │  │  文章目录    │ │
-│  └─────────────────┘  └─────────────────┘  └─────────────┘ │
-└─────────────────────────────────────────────────────────────┘
-                            │
-            ┌───────────────┴───────────────┐
-            ▼                               ▼
-┌───────────────────────┐       ┌─────────────────────────────┐
-│     lmjweb 服务        │       │      文件系统                │
-│  ┌─────────────────┐  │       │  ┌───────────────────────┐  │
-│  │  元数据服务      │  │       │  │  图片目录              │  │
-│  │  (LMDB 存储)     │  │       │  │  /path/to/images/     │  │
-│  │                 │  │       │  │  - 01img001...        │  │
-│  │  - 文章元数据    │  │       │  │  - 01img002...        │  │
-│  │  - 标签元数据    │  │       │  │  ...                  │  │
-│  │  - 图片元数据    │  │       │  └───────────────────────┘  │
-│  └─────────────────┘  │       │  ┌───────────────────────┐  │
-│                       │       │  │  文章目录              │  │
-│  端口：8080           │       │  │  /path/to/articles/   │  │
-│  文档：@doc/lmjcore_web/│     │  │  - 01art001... (md)   │  │
-│                       │       │  │  - 01art002... (md)   │  │
-│                       │       │  │  ...                  │  │
-│                       │       │  └───────────────────────┘  │
-└───────────────────────┘       └─────────────────────────────┘
-            │
-            ▼
-┌─────────────────────────────────────────────────────────────┐
-│                    Vue Blog 前端                             │
-│  ┌─────────────────────────────────────────────────────┐   │
-│  │  只读展示层                                          │   │
-│  │  - 首页：文章列表 + 标签筛选                          │   │
-│  │  - 文章页：Markdown 渲染                             │   │
-│  │  - 关于页                                            │   │
-│  └─────────────────────────────────────────────────────┘   │
-└─────────────────────────────────────────────────────────────┘
+```mermaid
+flowchart TB
+    subgraph User["用户层"]
+        Browser[浏览器访问]
+    end
+
+    subgraph Nginx["Nginx 层"]
+        ReverseProxy[反向代理<br/>/api/* → lmjweb:8080]
+        Static[静态资源<br/>/img/* → 图片目录]
+        FileRead[文件读取<br/>/article/* → 文章目录]
+    end
+
+    subgraph Backend["后端服务层"]
+        LMJWeb[lmjweb 元数据服务<br/>端口: 8080<br/>基于 LMDB 存储]
+        
+        subgraph FileSystem["文件系统"]
+            Images[图片目录<br/>/path/to/images/<br/>- 01img001...<br/>- 01img002...]
+            Articles[文章目录<br/>/path/to/articles/<br/>- 01art001... .md<br/>- 01art002... .md]
+        end
+    end
+
+    subgraph Frontend["Vue Blog 前端"]
+        Home[首页<br/>文章列表 + 标签筛选]
+        Post[文章页<br/>Markdown 渲染]
+        About[关于页]
+    end
+
+    Browser --> Nginx
+    ReverseProxy --> LMJWeb
+    Static --> Images
+    FileRead --> Articles
+    LMJWeb --> Frontend
 ```
 
 ---
@@ -75,49 +61,22 @@ location / {
 # API 代理
 # 为 /api/batch 单独配置
 location /api/batch {
-    # 允许 GET 和 POST（POST 会被覆写）
-    limit_except GET POST {
-        deny all;
-    }
-        
-    # 核心：将 POST 覆写为 GET
+    limit_except GET POST { deny all; }
     proxy_method GET;
-        
-    # 代理到后端
     proxy_pass http://10.88.0.1:30000/batch;
-        
-    # 重要：保留原始请求体
     proxy_pass_request_body on;
-        
-    # 标准代理头
     proxy_set_header Host $host;
     proxy_set_header X-Real-IP $remote_addr;
-    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-    proxy_set_header X-Forwarded-Proto $scheme;
-        
-    # 超时设置
-    proxy_connect_timeout 30s;
-    proxy_send_timeout 30s;
-    proxy_read_timeout 30s;
-        
-    # 禁用缓存
     add_header Cache-Control "no-cache, no-store, must-revalidate";
 }
 
-    # 其他 API 保持只读
-    location /api/ {
-        limit_except GET {
-            deny all;
-        }
-        
-        proxy_pass http://10.88.0.1:30000/;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        
-        add_header Cache-Control "no-cache, no-store, must-revalidate";
-    }
+# 其他 API 保持只读
+location /api/ {
+    limit_except GET { deny all; }
+    proxy_pass http://10.88.0.1:30000/;
+    proxy_set_header Host $host;
+    add_header Cache-Control "no-cache, no-store, must-revalidate";
+}
 
 # 图片服务
 location /img/ {
@@ -143,43 +102,37 @@ location /article/ {
 
 **数据结构**：
 
-```
-┌─────────────────────────────────────────────────────────┐
-│                    博客信息对象                          │
-│  类型：obj (01 开头)                                     │
-│  指针：为方便静态访问直接存储在index.html中                     │
-│  ┌─────────────────────────────────────────────────┐   │
-│  │ members:                                        │   │
-│  │   - title: "博客标题" (raw)                     │   │
-│  │   - posts: 02posts... (ref → 文章集合)         │   │
-│  │   - tags: 02tags... (ref → 标签集合)           │   │
-│  └─────────────────────────────────────────────────┘   │
-└─────────────────────────────────────────────────────────┘
-                        │
-        ┌───────────────┴───────────────┐
-        ▼                               ▼
-┌───────────────────┐           ┌───────────────────┐
-│    文章集合        │           │    标签集合        │
-│  类型：set (02 开头)│           │  类型：set (02 开头)│
-│  ┌─────────────┐  │           │  ┌─────────────┐  │
-│  │ elements:   │  │           │  │ elements:   │  │
-│  │ - 01art001  │  │           │  │ - 01tag001  │  │
-│  │ - 01art002  │  │           │  │ - 01tag002  │  │
-│  │ - ...       │  │           │  │ - ...       │  │
-│  └─────────────┘  │           │  └─────────────┘  │
-└───────────────────┘           └───────────────────┘
-        │                               │
-        ▼                               ▼
-┌───────────────────┐           ┌───────────────────┐
-│    文章对象        │           │    标签对象        │
-│  类型：obj         │           │  类型：obj         │
-│  ┌─────────────┐  │           │  ┌─────────────┐  │
-│  │ title       │  │           │  │ name        │  │
-│  │ slug        │  │           │  │ posts       │──┼──→ 标签文章集合
-│  │ cover       │──┼──→ 图片    │  └─────────────┘  │
-│  │ tags        │  │           └───────────────────┘
-│  └─────────────┘  │
-└───────────────────┘
+```mermaid
+flowchart TB
+    subgraph BlogInfo["博客信息对象 (obj)"]
+        Title["title: 博客标题 (raw)"]
+        PostsPtr["posts: 02posts... (ref)"]
+        TagsPtr["tags: 02tags... (ref)"]
+    end
+
+    subgraph PostSet["文章集合 (set)"]
+        Posts["elements: 01art001, 01art002, ..."]
+    end
+
+    subgraph TagSet["标签集合 (set)"]
+        Tags["elements: 01tag001, 01tag002, ..."]
+    end
+
+    subgraph PostObj["文章对象 (obj)"]
+        PostTitle["title"]
+        Cover["cover → 图片"]
+        PostTags["tags"]
+    end
+
+    subgraph TagObj["标签对象 (obj)"]
+        TagName["name"]
+        TagPosts["posts → 标签文章集合"]
+    end
+
+    BlogInfo --> PostsPtr --> PostSet
+    BlogInfo --> TagsPtr --> TagSet
+    PostSet --> PostObj
+    TagSet --> TagObj
 ```
 
 ---
@@ -249,73 +202,124 @@ src/
 
 ### 首页加载流程
 
-```
-1. 用户访问首页
-         │
-         ▼
-2. Vue 读取配置
-         │
-         ▼
-3. 请求 lmjweb: GET /obj/{BLOG_INFO_PTR}
-         │
-         ▼
-4. 获取博客信息 (title, postsPtr, tagsPtr)
-         │
-         ├──────────────┐
-         ▼              ▼
-5. 获取文章集合    6. 获取标签集合
-   GET /set/{postsPtr}    GET /set/{tagsPtr}
-         │                    │
-         ▼                    ▼
-7. 批量获取文章详情    8. 获取每个标签的文章数
-   POST /obj/batch         │
-         │                    ▼
-         ▼             9. 渲染标签栏
-10. 渲染文章列表
-         │
-         ▼
-11. 首页展示完成
+```mermaid
+sequenceDiagram
+    participant Browser as 浏览器
+    participant Vue as Vue 前端
+    participant LMJWeb as lmjweb 服务
+    participant Nginx as Nginx
+
+    Browser->>Vue: 访问首页
+    Vue->>Vue: 读取配置 (BLOG_INFO_PTR)
+    
+    Note over Vue,LMJWeb: 使用 batch + 链式查询优化
+    Vue->>LMJWeb: POST /batch<br/>[blogInfo.title, blogInfo.posts, blogInfo.tags]
+    LMJWeb-->>Vue: 返回博客信息
+    
+    Vue->>LMJWeb: GET /set/{postsPtr}
+    LMJWeb-->>Vue: 返回文章指针列表
+    
+    Vue->>LMJWeb: POST /batch (批量获取文章详情)
+    LMJWeb-->>Vue: 返回文章列表数据
+    
+    Vue->>LMJWeb: GET /set/{tagsPtr}
+    LMJWeb-->>Vue: 返回标签列表
+
+    Vue->>Vue: 渲染文章列表 + 标签栏
+    Vue-->>Browser: 首页展示完成
 ```
 
 ### 文章详情加载流程
 
-```
-1. 用户访问 /blogs/{ptr}
-         │
-         ▼
-2. Vue 根据文章指针请求文章元数据
-    GET /obj/{ptr}
-         │
-         ▼
-3. 获取文章内容
-   GET /article/{ptr} (Nginx 读取文件)
-         │
-         ▼
-4. Markdown 渲染 + 代码高亮
-         │
-         ▼
-5. 文章页展示完成
+```mermaid
+sequenceDiagram
+    participant Browser as 浏览器
+    participant Vue as Vue 前端
+    participant LMJWeb as lmjweb 服务
+    participant Nginx as Nginx
+    participant FS as 文件系统
+
+    Browser->>Vue: 访问 /blogs/{ptr}
+    
+    Note over Vue,LMJWeb: 使用 batch + 链式查询优化
+    Vue->>LMJWeb: POST /batch<br/>[article.title, article.cover, article.tags]
+    LMJWeb-->>Vue: 返回文章元数据 + tagsPtr
+    
+    Vue->>LMJWeb: GET /set/{tagsPtr}
+    LMJWeb-->>Vue: 返回标签列表
+
+    Vue->>Nginx: GET /article/{ptr}
+    Nginx->>FS: 读取文章文件
+    FS-->>Nginx: 返回 Markdown 内容
+    Nginx-->>Vue: 返回文章内容
+
+    Vue->>Vue: Markdown 渲染 + 代码高亮
+    Vue-->>Browser: 文章页展示完成
 ```
 
 ### 图片加载流程
 
+```mermaid
+sequenceDiagram
+    participant Browser as 浏览器
+    participant Vue as Vue 前端
+    participant Nginx as Nginx
+    participant FS as 文件系统
+
+    Browser->>Vue: 请求页面（含图片）
+    Vue->>Vue: 拼接图片 URL: /img/{coverPtr}
+    Vue->>Browser: 返回 HTML（含 img 标签）
+    Browser->>Nginx: GET /img/{coverPtr}
+    Nginx->>FS: 读取图片文件
+    FS-->>Nginx: 返回图片数据
+    Nginx-->>Browser: 返回图片内容
+    Browser->>Browser: 渲染图片
 ```
-1. Vue 组件需要显示图片
-         │
-         ▼
-2. 拼接图片 URL: /img/{coverPtr}
-         │
-         ▼
-3. 浏览器请求图片
-         │
-         ▼
-4. Nginx 拦截 /img/* 请求
-         │
-         ▼
-5. Nginx 从文件系统读取图片文件
-         │
-         ▼
-6. 返回图片内容给浏览器
+
+---
+
+## 内容发布流程
+
+```mermaid
+flowchart TB
+    subgraph Publish["内网发布工具"]
+        UploadImg[1. 上传图片<br/>向 lmjweb 写入元数据]
+        UploadPost[2. 上传文章<br/>向 lmjweb 写入元数据]
+        LinkPostImg[3. 创建文章与图片的关联]
+    end
+
+    subgraph LMJWeb["lmjweb 数据库"]
+        PostMeta[文章元数据]
+        TagMeta[标签元数据]
+        ImageMeta[图片元数据]
+    end
+
+    subgraph Filesystem["文件系统"]
+        ImgDir["/images/<br/>01img..."]
+        ArtDir["/articles/<br/>01art... (Markdown)"]
+    end
+
+    subgraph NginxSvc["Nginx 服务"]
+        NginxProxy[Nginx 反向代理]
+    end
+
+    subgraph Browser["浏览器"]
+        Display[用户访问展示]
+    end
+
+    UploadImg --> ImageMeta
+    UploadPost --> PostMeta
+    LinkPostImg --> PostMeta
+    
+    UploadPost -.->|4. 复制文件| ArtDir
+    UploadImg -.->|4. 复制文件| ImgDir
+    
+    PostMeta --> NginxProxy
+    ImageMeta --> NginxProxy
+    ImgDir --> NginxProxy
+    ArtDir --> NginxProxy
+    
+    NginxProxy --> Display
 ```
 
 ---
@@ -324,71 +328,22 @@ src/
 
 ### 开发环境
 
-```
-┌─────────────┐
-│  开发者浏览器 │
-└──────┬──────┘
-       │
-       ▼
-┌─────────────┐     ┌─────────────┐
-│  Vite Dev   │────→│  lmjweb     │
-│  Server     │     │  :8080      │
-│  :5173      │     └─────────────┘
-└─────────────┘
+```mermaid
+flowchart LR
+    Dev[开发者浏览器] --> Vite[Vite Dev Server<br/>:5173]
+    Vite --> LMJWeb[lmjweb<br/>:8080]
 ```
 
 ### 生产环境
 
-```
-┌─────────────┐
-│  用户浏览器   │
-└──────┬──────┘
-       │
-       ▼
-┌─────────────┐
-│    Nginx    │
-│    :80/:443 │
-└──────┬──────┘
-       │
-       ├─────────────┬──────────────┬─────────────┐
-       ▼             ▼              ▼             ▼
-┌───────────┐ ┌───────────┐ ┌───────────┐ ┌───────────┐
-│ Vue dist  │ │  图片目录  │ │  文章目录  │ │  lmjweb   │
-│  静态文件  │ │  /images/ │ │ /articles/│ │  :8080    │
-└───────────┘ └───────────┘ └───────────┘ └───────────┘
-```
+```mermaid
+flowchart TB
+    User[用户浏览器] --> Nginx[Nginx<br/>:80/:443]
 
----
-
-## 内容发布流程
-
-```
-┌─────────────────┐
-│  内网发布工具    │
-└───────┬─────────┘
-        │
-        │ 1. 上传图片(向lmjweb写入元数据) → 生成图片指针 01img...
-        │ 2. 上传文章(向lmjweb写入元数据) → 生成文章指针 01art...
-        │ 3. 创建文章与图片的关联
-        ▼
-┌─────────────────────────────────────┐
-│            lmjweb 数据库             │
-│  ┌─────────────────────────────┐   │
-│  │  - 文章元数据                │   │
-│  │  - 标签元数据                │   │
-│  │  - 图片元数据                │   │
-│  └─────────────────────────────┘   │
-└─────────────────────────────────────┘
-        │
-        │ 4. 复制文件到对应目录
-        ▼
-┌─────────────────────────────────────┐
-│          文件系统                    │
-│  ┌─────────────┐  ┌─────────────┐  │
-│  │ /images/    │  │ /articles/  │  │
-│  │ 01img...    │  │ 01art...    │  │
-│  └─────────────┘  └─────────────┘  │
-└─────────────────────────────────────┘
+    Nginx --> VueDist[Vue dist<br/>静态文件]
+    Nginx --> ImgDir[图片目录<br/>/images/]
+    Nginx --> ArtDir[文章目录<br/>/articles/]
+    Nginx --> LMJWeb[lmjweb<br/>:8080]
 ```
 
 ---
@@ -425,7 +380,7 @@ src/
 
 ## 配置说明
 
-### index.html
+### index.html 中的全局配置
 
 | 配置项 | 类型 | 说明 | 示例 |
 |--------|------|------|------|
@@ -444,7 +399,7 @@ src/
 - **Nginx**：支持多节点部署，静态资源可接入 CDN
 - **文件系统**：图片/文章目录可挂载分布式存储
 
-### 功能扩展 (不考虑实现,展示潜力)
+### 功能扩展（展示潜力，不考虑实现）
 
 - **评论系统**：可新增评论对象集合，关联文章指针
 - **用户系统**：可新增用户对象集合，实现作者关联
@@ -483,3 +438,5 @@ curl -I http://localhost/article/01art...
 | 版本 | 日期 | 变更 |
 |------|------|------|
 | 1.0.0 | 2026-05-18 | 初始架构：Nginx + lmjweb + Vue Blog |
+| 1.1.0 | 2026-05-23 | 使用 Mermaid 图表重构架构图 |
+| 1.2.0 | 2026-05-23 | 优化请求：使用 batch + 链式查询减少 HTTP 请求数；移除文章 slug 字段 |

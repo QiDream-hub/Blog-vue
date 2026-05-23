@@ -82,7 +82,7 @@ export async function getObjectMember(ptr, member) {
  * @returns {Promise<{path: string, value: string, type: string}>}
  */
 export async function queryObjectPath(path) {
-  const response = await fetch(`${getApiUrl()}/obj/query?path=${encodeURIComponent(path)}`)
+  const response = await fetch(`${getApiUrl()}/obj/query/${encodeURIComponent(path)}`)
   if (!response.ok) {
     throw new Error(`Query failed: ${response.statusText}`)
   }
@@ -140,18 +140,27 @@ export async function getBlogInfo(forceRefresh = false) {
     return blogInfoCache
   }
 
-  const obj = await getObject(getBlogInfoPtr())
-  const result = { ptr: obj.ptr }
+  const blogInfoPtr = getBlogInfoPtr()
 
-  for (const member of obj.members) {
-    if (member.name === 'title') {
-      result.title = member.value
-    } else if (member.name === 'posts') {
-      result.postsPtr = member.value
-    } else if (member.name === 'tags') {
-      result.tagsPtr = member.value
-    }
+  // 使用 batch + 链式查询，单次 HTTP 请求获取所有成员
+  const operations = [
+    { method: 'GET', path: `/obj/query/${encodeURIComponent(`${blogInfoPtr}.title`)}` },
+    { method: 'GET', path: `/obj/query/${encodeURIComponent(`${blogInfoPtr}.posts`)}` },
+    { method: 'GET', path: `/obj/query/${encodeURIComponent(`${blogInfoPtr}.tags`)}` }
+  ]
+
+  console.log('[getBlogInfo] 请求 batch:', operations)
+  const results = await batchOperations(operations)
+  console.log('[getBlogInfo] 响应:', results)
+
+  const result = {
+    ptr: blogInfoPtr,
+    title: results.results[0].status === 200 ? results.results[0].body.value : '',
+    postsPtr: results.results[1].status === 200 ? results.results[1].body.value : '',
+    tagsPtr: results.results[2].status === 200 ? results.results[2].body.value : ''
   }
+  
+  console.log('[getBlogInfo] 解析结果:', result)
 
   blogInfoCache = result
   return result
@@ -170,6 +179,12 @@ export function clearBlogInfoCache() {
  * @returns {Promise<string[]>} 文章指针数组
  */
 export async function getAllPostPtrs(postsPtr) {
+  // 验证指针有效性
+  if (!postsPtr || postsPtr.length !== 34) {
+    console.error('Invalid postsPtr:', postsPtr)
+    return []
+  }
+  
   const set = await getSet(postsPtr)
   return set.elements
     .filter(el => el.type === 'ref')
@@ -179,35 +194,35 @@ export async function getAllPostPtrs(postsPtr) {
 /**
  * 获取文章详情
  * @param {string} ptr - 文章指针
- * @returns {Promise<{ptr: string, title: string, slug: string, cover: string, tags: string[]}>}
+ * @returns {Promise<{ptr: string, title: string, cover: string, tags: string[]}>}
  */
 export async function getPostDetail(ptr) {
-  const obj = await getObject(ptr)
-  const result = { ptr }
-  const tagsPtr = []
-  
-  for (const member of obj.members) {
-    if (member.name === 'title') {
-      result.title = member.value
-    } else if (member.name === 'slug') {
-      result.slug = member.value
-    } else if (member.name === 'cover') {
-      result.cover = member.value
-    } else if (member.name === 'tags') {
-      tagsPtr.push(member.value)
-    }
+  // 使用 batch + 链式查询，单次 HTTP 请求获取文章元数据和标签集合指针
+  const operations = [
+    { method: 'GET', path: `/obj/query/${encodeURIComponent(`${ptr}.title`)}` },
+    { method: 'GET', path: `/obj/query/${encodeURIComponent(`${ptr}.cover`)}` },
+    { method: 'GET', path: `/obj/query/${encodeURIComponent(`${ptr}.tags`)}` }
+  ]
+
+  const results = await batchOperations(operations)
+
+  const tagsPtr = results.results[2].status === 200 ? results.results[2].body.value : null
+
+  const result = {
+    ptr,
+    title: results.results[0].status === 200 ? results.results[0].body.value : '',
+    cover: results.results[1].status === 200 ? results.results[1].body.value : '',
+    tags: []
   }
-  
-  // 获取标签集合
-  if (tagsPtr.length > 0) {
-    const tagsSet = await getSet(tagsPtr[0])
+
+  // 获取标签集合内容
+  if (tagsPtr) {
+    const tagsSet = await getSet(tagsPtr)
     result.tags = tagsSet.elements
       .filter(el => el.type === 'raw')
       .map(el => el.value)
-  } else {
-    result.tags = []
   }
-  
+
   return result
 }
 
@@ -271,42 +286,53 @@ export async function getPostsByTag(tagPostsPtr) {
 /**
  * 批量获取所有文章详情（单次批量请求）
  * @param {string[]} postPtrs - 文章指针数组
- * @returns {Promise<Array<{ptr: string, title: string, slug: string, cover: string, tags: string[]}|null>>}
+ * @returns {Promise<Array<{ptr: string, title: string, cover: string, tags: string[]}|null>>}
  */
 export async function batchGetPosts(postPtrs) {
   if (postPtrs.length === 0) return []
 
-  // 构建批量查询：获取每篇文章的所有成员
-  const operations = postPtrs.flatMap(ptr => [
-    { method: 'GET', path: `/obj/${ptr}` }
+  // 第一阶段：使用 batch + 链式查询获取所有文章的关键成员（包括 tags 指针）
+  const metaOperations = postPtrs.flatMap(ptr => [
+    { method: 'GET', path: `/obj/query/${encodeURIComponent(`${ptr}.title`)}` },
+    { method: 'GET', path: `/obj/query/${encodeURIComponent(`${ptr}.cover`)}` },
+    { method: 'GET', path: `/obj/query/${encodeURIComponent(`${ptr}.tags`)}` }
   ])
 
-  const results = await batchOperations(operations)
-  if (!results.success) {
+  const metaResults = await batchOperations(metaOperations)
+  if (!metaResults.success) {
     throw new Error('Failed to batch get posts')
   }
 
-  // 提取标签集合指针
+  // 提取文章详情和标签集合指针
+  const postDetails = []
   const tagSetPtrs = []
-  const postDetails = results.results.map((result, idx) => {
-    if (result.status !== 200) return null
 
-    const obj = result.body
-    const detail = { ptr: obj.ptr }
-    let tagsPtr = null
+  for (let i = 0; i < postPtrs.length; i++) {
+    const baseIdx = i * 3
+    const titleResult = metaResults.results[baseIdx]
+    const coverResult = metaResults.results[baseIdx + 1]
+    const tagsResult = metaResults.results[baseIdx + 2]
 
-    for (const member of obj.members) {
-      if (member.name === 'title') detail.title = member.value
-      else if (member.name === 'slug') detail.slug = member.value
-      else if (member.name === 'cover') detail.cover = member.value
-      else if (member.name === 'tags') tagsPtr = member.value
+    if (titleResult.status !== 200) {
+      postDetails.push(null)
+      continue
     }
 
-    if (tagsPtr) tagSetPtrs.push({ ptr: obj.ptr, tagsPtr })
-    return detail
-  })
+    const detail = {
+      ptr: postPtrs[i],
+      title: titleResult.body.value,
+      cover: coverResult.status === 200 ? coverResult.body.value : '',
+      tags: []
+    }
 
-  // 批量获取所有标签集合
+    if (tagsResult.status === 200 && tagsResult.body.value) {
+      tagSetPtrs.push({ idx: i, tagsPtr: tagsResult.body.value })
+    }
+
+    postDetails.push(detail)
+  }
+
+  // 第二阶段：批量获取所有标签集合（如果有的话）
   if (tagSetPtrs.length > 0) {
     const tagOperations = tagSetPtrs.map(t => ({
       method: 'GET',
@@ -316,16 +342,19 @@ export async function batchGetPosts(postPtrs) {
 
     // 将标签映射回文章
     if (tagResults.success) {
-      let tagIdx = 0
-      postDetails.forEach((detail) => {
+      postDetails.forEach((detail, detailIdx) => {
         if (!detail) return
-        const tagResult = tagResults.results[tagIdx++]
-        if (tagResult.status === 200) {
-          detail.tags = tagResult.body.elements
-            .filter(el => el.type === 'raw')
-            .map(el => el.value)
-        } else {
-          detail.tags = []
+        // 找到当前文章对应的 tagSetPtrs 索引
+        const tagSetInfo = tagSetPtrs.find(t => t.idx === detailIdx)
+        if (tagSetInfo) {
+          const tagResult = tagResults.results[tagSetPtrs.indexOf(tagSetInfo)]
+          if (tagResult.status === 200) {
+            detail.tags = tagResult.body.elements
+              .filter(el => el.type === 'raw')
+              .map(el => el.value)
+          } else {
+            detail.tags = []
+          }
         }
       })
     }

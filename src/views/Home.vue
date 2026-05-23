@@ -68,6 +68,14 @@ const loadData = async () => {
     try {
         // 1. 获取博客信息
         const blogInfo = await getBlogInfo()
+        
+        // 验证博客信息
+        if (!blogInfo.postsPtr || blogInfo.postsPtr.length !== 34) {
+            throw new Error(`Invalid postsPtr: ${blogInfo.postsPtr}. 请检查 BLOG_INFO_PTR 配置是否正确`)
+        }
+        if (!blogInfo.tagsPtr || blogInfo.tagsPtr.length !== 34) {
+            throw new Error(`Invalid tagsPtr: ${blogInfo.tagsPtr}. 请检查 BLOG_INFO_PTR 配置是否正确`)
+        }
 
         // 2. 获取所有文章指针
         const postPtrs = await getAllPostPtrs(blogInfo.postsPtr)
