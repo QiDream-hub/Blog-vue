@@ -23,29 +23,6 @@
 <script setup>
 import { useRouter } from 'vue-router'
 
-const props = defineProps({
-  title: {
-    type: String,
-    required: true
-  },
-  excerpt: {
-    type: String,
-    default: ''
-  },
-  cover: {
-    type: String,
-    default: ''
-  },
-  tags: {
-    type: Array,
-    default: () => []
-  },
-  to: {
-    type: [String, Object],
-    default: ''
-  }
-})
-
 const router = useRouter()
 
 const handleClick = () => {

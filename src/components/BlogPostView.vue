@@ -405,9 +405,6 @@ function addMermaidToggleButtons(block, graphDefinition) {
                 oldButton.remove()
             }
             addMermaidToggleButtons(block, graphDefinition)
-
-            // 更新按钮文本
-            // 按钮已重新创建，无需更新
         }
     }
 

@@ -4,7 +4,7 @@
     <!-- 左侧：Logo -->
     <div class="header-left">
       <div class="logo" @click="$router.push('/')">
-        📝 My Blog
+        📝 QDream Blog
       </div>
     </div>
 

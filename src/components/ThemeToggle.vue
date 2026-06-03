@@ -22,22 +22,24 @@
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue';
-import { getAvailableThemes, getThemeMeta, getCurrentTheme, setTheme } from '../styles/ThemeStore';
+import { getAvailableThemes, getThemeMeta, getCurrentTheme, setTheme, getAllThemes } from '../styles/ThemeManager';
 
-// 可用主题配置（从 ThemeStore 获取）
-const availableThemes = getAvailableThemes();
+// 可用主题配置（从 ThemeManager 获取）
+const availableThemes = ref({});
 
-const currentTheme = ref(getCurrentTheme());
+const currentTheme = ref(getCurrentTheme()||'');
 const showPicker = ref(false);
 
 // 当前主题名称
 const currentThemeName = computed(() => {
-    return getThemeMeta(currentTheme.value).name;
+    const meta = getThemeMeta(currentTheme.value);
+    return meta?.name || '未知主题';
 });
 
 // 当前主题图标
 const currentThemeIcon = computed(() => {
-    return getThemeMeta(currentTheme.value).icon;
+    const meta = getThemeMeta(currentTheme.value);
+    return meta?.icon || '❓';
 });
 
 // 切换主题（显示/隐藏选择器）
@@ -59,12 +61,41 @@ function handleClickOutside(e) {
     }
 }
 
+// 检查当前主题是否仍然有效，如果无效则清除
+function validateCurrentTheme() {
+    const allThemes = getAllThemes();
+    const themeExists = allThemes.some(t => t.key === currentTheme.value);
+    
+    if (!themeExists) {
+        // 当前主题已被删除，清空选择（不自动切换默认主题）
+        currentTheme.value = '';
+    }
+}
+
+// 监听 localStorage 变化（其他标签页或手动修改）
+function handleStorageChange(e) {
+    if (e.key === 'app-theme' || e.key === 'app-themes') {
+        const newTheme = getCurrentTheme();
+        validateCurrentTheme();
+        if (currentTheme.value !== newTheme && currentTheme.value !== '') {
+            currentTheme.value = newTheme;
+        }
+        availableThemes.value = getAvailableThemes();
+    }
+}
+
 onMounted(() => {
+    // 加载主题列表
+    availableThemes.value = getAvailableThemes();
+    currentTheme.value = getCurrentTheme();
+    validateCurrentTheme();
     document.addEventListener('click', handleClickOutside);
+    window.addEventListener('storage', handleStorageChange);
 });
 
 onUnmounted(() => {
     document.removeEventListener('click', handleClickOutside);
+    window.removeEventListener('storage', handleStorageChange);
 });
 </script>
 

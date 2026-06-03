@@ -24,7 +24,7 @@
         </div>
 
         <div class="footer-bottom">
-            <p>&copy; {{ currentYear }} My Blog. 保留所有权利。</p>
+            <p>&copy; {{ currentYear }} QDream Blog. 保留所有权利。</p>
             <p class="footer-copyright-extra">用心写代码，用爱写文章 ❤️</p>
         </div>
     </footer>

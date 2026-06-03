@@ -2,6 +2,7 @@ import About from '@/views/About.vue'
 import Blog from '@/views/Blog.vue'
 import Error from '@/views/Error.vue'
 import Home from '@/views/Home.vue'
+import DiyTheme from '@/views/DiyTheme.vue'
 import { createRouter, createWebHistory } from 'vue-router'
 
 const router = createRouter({
@@ -12,6 +13,11 @@ const router = createRouter({
       path: "/",
       name: "首页",
       component: Home,
+    },
+    {
+      path: "/DIYTheme",
+      name: "DIY 主题",
+      component: DiyTheme
     },
     {
       path: "/about",
