@@ -439,14 +439,17 @@ onMounted(() => {
     }
 
     p {
-        color: var(--text-secondary-color);
+        color: var(--description-color);
         margin-bottom: 1.5rem;
+        line-height: 1.6;
 
         code {
-            background: var(--bg-secondary-color);
+            background: var(--tag-bg-color);
+            color: var(--tag-text-color);
             padding: 0.2rem 0.5rem;
             border-radius: 4px;
             font-family: monospace;
+            transition: background-color var(--anim-duration) var(--anim-easing);
         }
     }
 }
@@ -461,7 +464,7 @@ onMounted(() => {
         align-items: center;
         padding: 1rem;
         background: var(--bg-color);
-        border: 1px solid var(--border-color);
+        border: 1px solid var(--border-light-color);
         border-radius: 8px;
         cursor: pointer;
         transition: var(--transition-base);
@@ -469,6 +472,7 @@ onMounted(() => {
         &:hover {
             border-color: var(--primary-color);
             box-shadow: var(--shadow-sm);
+            background: var(--bg-secondary-color);
         }
 
         h2 {
@@ -487,6 +491,11 @@ onMounted(() => {
 
         .theme-count {
             white-space: nowrap;
+            padding: 0.2rem 0.6rem;
+            background: var(--tag-bg-color);
+            color: var(--tag-text-color);
+            border-radius: 12px;
+            font-weight: 500;
         }
 
         .current-theme {
@@ -499,7 +508,8 @@ onMounted(() => {
 
         .collapse-icon {
             font-size: 0.8rem;
-            transition: transform 0.2s ease;
+            color: var(--meta-color);
+            transition: transform var(--anim-duration) var(--anim-easing);
 
             &.collapsed {
                 transform: rotate(-90deg);
@@ -517,8 +527,8 @@ onMounted(() => {
 .collapse-leave-active {
     overflow: hidden;
     transition:
-        max-height 0.3s ease,
-        opacity 0.3s ease;
+        max-height var(--anim-duration) var(--anim-easing),
+        opacity var(--anim-duration) var(--anim-easing);
 }
 
 .collapse-enter-from {
@@ -553,18 +563,20 @@ onMounted(() => {
     align-items: center;
     padding: 1rem;
     background: var(--bg-color);
-    border: 1px solid var(--border-color);
+    border: 1px solid var(--border-light-color);
     border-radius: 8px;
     transition: var(--transition-base);
 
     &:hover {
         border-color: var(--primary-color);
         box-shadow: var(--shadow-sm);
+        transform: translateY(-2px);
     }
 
     &.active {
         border-color: var(--selected-color);
         background: var(--selected-bg-color);
+        box-shadow: var(--shadow-sm);
     }
 }
 
@@ -601,26 +613,10 @@ onMounted(() => {
     align-items: center;
 }
 
-.btn-apply {
-    padding: 0.4rem 1rem;
-    background: var(--secondary-color);
-    color: white;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 0.85rem;
-    transition: var(--transition-base);
-
-    &:hover {
-        opacity: 0.9;
-        transform: translateY(-1px);
-    }
-}
-
 .btn-edit {
     padding: 0.4rem 0.7rem;
-    background: var(--secondary-color);
-    border: 1px solid var(--border-color);
+    background: var(--bg-secondary-color);
+    border: 1px solid var(--border-light-color);
     border-radius: 6px;
     cursor: pointer;
     font-size: 1rem;
@@ -628,11 +624,13 @@ onMounted(() => {
     display: flex;
     align-items: center;
     justify-content: center;
+    color: var(--text-secondary-color);
 
     &:hover {
         background: var(--hover-bg-color);
         border-color: var(--primary-color);
         color: var(--primary-color);
+        transform: translateY(-1px);
     }
 
     svg {
@@ -643,8 +641,8 @@ onMounted(() => {
 
 .btn-delete {
     padding: 0.4rem 0.7rem;
-    background: var(--secondary-color);
-    border: 1px solid var(--border-color);
+    background: var(--bg-secondary-color);
+    border: 1px solid var(--border-light-color);
     border-radius: 6px;
     cursor: pointer;
     font-size: 1rem;
@@ -652,11 +650,13 @@ onMounted(() => {
     display: flex;
     align-items: center;
     justify-content: center;
+    color: var(--text-secondary-color);
 
     &:hover {
         background: var(--error-bg-color);
         border-color: var(--error-border-color);
         color: var(--error-color);
+        transform: translateY(-1px);
     }
 
     svg {
@@ -677,16 +677,9 @@ onMounted(() => {
 
     &:hover {
         background: var(--error-bg-color);
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-sm);
     }
-}
-
-.default-badge {
-    padding: 0.4rem 1rem;
-    background: var(--bg-secondary-color);
-    color: var(--text-secondary-color);
-    border-radius: 6px;
-    font-size: 0.8rem;
-    font-weight: 500;
 }
 
 .theme-list-actions {
@@ -695,8 +688,8 @@ onMounted(() => {
     .btn-restore {
         padding: 0.6rem 1.2rem;
         background: var(--bg-secondary-color);
-        color: var(--text-color);
-        border: 1px solid var(--border-color);
+        color: var(--description-color);
+        border: 1px solid var(--border-light-color);
         border-radius: 8px;
         cursor: pointer;
         font-size: 0.9rem;
@@ -704,7 +697,8 @@ onMounted(() => {
 
         &:hover {
             background: var(--hover-bg-color);
-            border-color: var(--primary-color);
+            border-color: var(--warning-color);
+            color: var(--warning-color);
         }
     }
 }
@@ -712,7 +706,7 @@ onMounted(() => {
 .divider {
     border: none;
     height: 1px;
-    background: var(--border-color);
+    background: var(--border-light-color);
     margin: 2rem 0;
 }
 
@@ -722,6 +716,8 @@ onMounted(() => {
     border-radius: 12px;
     padding: 2rem;
     box-shadow: var(--shadow-md);
+    border: 1px solid var(--border-light-color);
+    transition: var(--transition-base);
 
     h2 {
         font-size: 1.3rem;
@@ -764,13 +760,17 @@ onMounted(() => {
     &:focus {
         outline: none;
         border-color: var(--primary-color);
-        box-shadow: var(--shadow-sm);
+        box-shadow: var(--shadow-primary);
     }
 
     &:disabled {
         opacity: 0.6;
         cursor: not-allowed;
         background: var(--bg-secondary-color);
+    }
+
+    &::placeholder {
+        color: var(--meta-color);
     }
 }
 
@@ -799,7 +799,7 @@ onMounted(() => {
 
     label {
         font-size: 0.9rem;
-        color: var(--text-secondary-color);
+        color: var(--description-color);
         margin-bottom: 0.3rem;
         white-space: nowrap;
         overflow: hidden;
@@ -820,9 +820,11 @@ onMounted(() => {
         cursor: pointer;
         padding: 2px;
         background: var(--bg-color);
+        transition: var(--transition-base);
 
         &:hover {
             border-color: var(--primary-color);
+            box-shadow: var(--shadow-sm);
         }
     }
 
@@ -834,6 +836,7 @@ onMounted(() => {
         padding: 0.3rem 0.5rem;
         border-radius: 4px;
         min-width: 80px;
+        border: 1px solid var(--border-light-color);
     }
 }
 
@@ -849,7 +852,7 @@ onMounted(() => {
 
     label {
         font-size: 0.9rem;
-        color: var(--text-secondary-color);
+        color: var(--description-color);
         margin-bottom: 0.3rem;
     }
 }
@@ -869,7 +872,12 @@ onMounted(() => {
         &:focus {
             outline: none;
             border-color: var(--primary-color);
-            box-shadow: var(--shadow-sm);
+            box-shadow: var(--shadow-primary);
+        }
+
+        &::placeholder {
+            color: var(--meta-color);
+            font-style: italic;
         }
     }
 }
@@ -880,7 +888,7 @@ onMounted(() => {
     gap: 1rem;
     margin-top: 2rem;
     padding-top: 1.5rem;
-    border-top: 1px solid var(--border-color);
+    border-top: 1px solid var(--border-light-color);
 
     button {
         padding: 0.7rem 1.5rem;
@@ -894,26 +902,33 @@ onMounted(() => {
             transform: translateY(-2px);
             box-shadow: var(--shadow-md);
         }
+
+        &:active {
+            transform: translateY(0);
+        }
     }
 }
 
 .btn-save {
     background: var(--primary-color);
     color: var(--text-color);
+    font-weight: 600;
 
     &:hover {
         background: var(--selected-color);
+        box-shadow: var(--shadow-primary);
     }
 }
 
 .btn-preview {
     background: var(--secondary-color);
     color: var(--text-color);
+    font-weight: 600;
 }
 
 .btn-reset {
     background: var(--bg-secondary-color);
-    color: var(--text-color);
+    color: var(--text-secondary-color);
     border: 1px solid var(--border-color);
 }
 
@@ -922,6 +937,7 @@ onMounted(() => {
     padding: 1rem;
     border-radius: 8px;
     font-size: 0.95rem;
+    animation: slideIn var(--anim-duration) var(--anim-easing);
 
     &.success {
         background: var(--success-bg-color);
@@ -933,6 +949,18 @@ onMounted(() => {
         background: var(--error-bg-color);
         color: var(--error-text-color);
         border: 1px solid var(--error-border-color);
+    }
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(var(--anim-translate-y));
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
     }
 }
 </style>

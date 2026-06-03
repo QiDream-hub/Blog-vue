@@ -737,6 +737,9 @@ onMounted(() => {
         border-radius: 4px;
         font-family: 'SFMono-Regular', Consolas, monospace;
         font-size: 0.95em;
+        transition:
+            background-color var(--anim-duration, 0.3s) var(--anim-easing, ease),
+            color var(--anim-duration, 0.3s) var(--anim-easing, ease);
 
         @media (max-width: 480px) {
             font-size: 0.85em;
@@ -939,6 +942,7 @@ onMounted(() => {
                 font-size: 0.85rem;
                 line-height: 1.5;
                 color: var(--text-color);
+                transition: color var(--anim-duration, 0.3s) var(--anim-easing, ease);
             }
 
             @media (max-width: 480px) {
