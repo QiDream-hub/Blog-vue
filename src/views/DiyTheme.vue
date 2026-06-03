@@ -4,46 +4,63 @@
         <p>通过这个页面，你可以创建、编辑或删除自定义主题。</p>
         <p>所有主题存储在 <code>localStorage</code> 中，刷新页面后依然生效。</p>
 
-        <!-- 主题列表 -->
+        <!-- 主题列表（可折叠） -->
         <div class="theme-list-section">
-            <h2>主题列表</h2>
-            <div class="theme-list">
-                <div
-                    v-for="themeItem in allThemes"
-                    :key="themeItem.key"
-                    :class="['theme-item', { active: currentThemeKey === themeItem.key }]"
-                >
-                    <div class="theme-info">
-                        <span class="theme-icon">{{ themeItem.icon }}</span>
-                        <div class="theme-meta">
-                            <span class="theme-name">{{ themeItem.name }}</span>
-                            <span class="theme-key">{{ themeItem.key }}</span>
+            <div class="theme-list-header" @click="toggleCollapse">
+                <h2>主题列表</h2>
+                <div class="theme-list-summary">
+                    <span class="theme-count">{{ allThemes.length }} 个主题</span>
+                    <span class="current-theme" v-if="currentThemeKey">
+                        · 当前：<strong>{{ allThemesObj[currentThemeKey]?.name || currentThemeKey }}</strong>
+                    </span>
+                    <span class="collapse-icon" :class="{ collapsed: isCollapsed }">
+                        {{ isCollapsed ? '▼' : '▲' }}
+                    </span>
+                </div>
+            </div>
+            <transition name="collapse">
+                <div v-show="!isCollapsed" class="theme-list-wrapper">
+                    <div class="theme-list">
+                        <div v-for="themeItem in allThemes" :key="themeItem.key"
+                            :class="['theme-item', { active: currentThemeKey === themeItem.key }]">
+                            <div class="theme-info">
+                                <span class="theme-icon">{{ themeItem.icon }}</span>
+                                <div class="theme-meta">
+                                    <span class="theme-name">{{ themeItem.name }}</span>
+                                    <span class="theme-key">{{ themeItem.key }}</span>
+                                </div>
+                            </div>
+                            <div class="theme-actions">
+                                <button @click="editTheme(themeItem.key)" class="btn-edit" title="编辑此主题">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+                                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                        stroke-linejoin="round">
+                                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                                    </svg>
+                                </button>
+                                <button @click="confirmDelete(themeItem.key)" class="btn-delete" title="删除此主题">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+                                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                        stroke-linejoin="round">
+                                        <polyline points="3 6 5 6 21 6"></polyline>
+                                        <path
+                                            d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2">
+                                        </path>
+                                        <line x1="10" y1="11" x2="10" y2="17"></line>
+                                        <line x1="14" y1="11" x2="14" y2="17"></line>
+                                    </svg>
+                                </button>
+                            </div>
                         </div>
                     </div>
-                    <div class="theme-actions">
-                        <button
-                            v-if="currentThemeKey !== themeItem.key"
-                            @click="selectTheme(themeItem.key)"
-                            class="btn-apply"
-                            title="应用此主题"
-                        >
-                            应用
-                        </button>
-                        <button
-                            @click="confirmDelete(themeItem.key)"
-                            class="btn-delete"
-                            title="删除此主题"
-                        >
-                            🗑️
+                    <div class="theme-list-actions">
+                        <button @click="resetAllThemesAction" class="btn-restore">
+                            重置所有主题为默认
                         </button>
                     </div>
                 </div>
-            </div>
-            <div class="theme-list-actions">
-                <button @click="resetAllThemesAction" class="btn-restore">
-                    重置所有主题为默认
-                </button>
-            </div>
+            </transition>
         </div>
 
         <hr class="divider">
@@ -51,17 +68,13 @@
         <!-- 创建/编辑主题表单 -->
         <div class="theme-form">
             <h2>{{ isEditing ? '编辑主题' : '创建新主题' }}</h2>
-            
+
             <div class="form-section">
                 <h3>基本信息</h3>
                 <div class="form-group">
                     <label>主题 Key</label>
-                    <input 
-                        v-model="themeKeyInput" 
-                        placeholder="例如：custom_pink" 
-                        class="input-field"
-                        :disabled="isEditing"
-                    >
+                    <input v-model="themeKeyInput" placeholder="例如：custom_pink" class="input-field"
+                        :disabled="isEditing">
                     <span class="field-hint">主题的唯一标识符，创建后不可修改</span>
                 </div>
                 <div class="form-group">
@@ -80,11 +93,7 @@
                     <div v-for="(value, key) in coreColors" :key="key" class="color-picker-group">
                         <label :title="key">{{ getLabel(key) }}</label>
                         <div class="color-input-wrapper">
-                            <input 
-                                type="color" 
-                                v-model="theme.variables[key]" 
-                                @input="onColorChange"
-                            >
+                            <input type="color" v-model="theme.variables[key]" @input="onColorChange">
                             <span class="color-value">{{ theme.variables[key] }}</span>
                         </div>
                     </div>
@@ -97,11 +106,7 @@
                     <div v-for="(value, key) in stateColors" :key="key" class="color-picker-group">
                         <label :title="key">{{ getLabel(key) }}</label>
                         <div class="color-input-wrapper">
-                            <input 
-                                type="color" 
-                                v-model="theme.variables[key]" 
-                                @input="onColorChange"
-                            >
+                            <input type="color" v-model="theme.variables[key]" @input="onColorChange">
                             <span class="color-value">{{ theme.variables[key] }}</span>
                         </div>
                     </div>
@@ -114,11 +119,7 @@
                     <div v-for="(value, key) in functionalColors" :key="key" class="color-picker-group">
                         <label :title="key">{{ getLabel(key) }}</label>
                         <div class="color-input-wrapper">
-                            <input 
-                                type="color" 
-                                v-model="theme.variables[key]" 
-                                @input="onColorChange"
-                            >
+                            <input type="color" v-model="theme.variables[key]" @input="onColorChange">
                             <span class="color-value">{{ theme.variables[key] }}</span>
                         </div>
                     </div>
@@ -131,11 +132,8 @@
                     <div v-for="(value, key) in shadowColors" :key="key" class="shadow-picker-group">
                         <label>{{ getLabel(key) }}</label>
                         <div class="shadow-input-wrapper">
-                            <input 
-                                type="text" 
-                                v-model="theme.variables[key]" 
-                                placeholder="例如：0 4px 16px rgba(255, 122, 174, 0.3)"
-                            >
+                            <input type="text" v-model="theme.variables[key]"
+                                placeholder="例如：0 4px 16px rgba(255, 122, 174, 0.3)">
                         </div>
                     </div>
                 </div>
@@ -228,6 +226,7 @@ const allThemesObj = ref({})
 const currentThemeKey = ref('')
 const themeKeyInput = ref('')
 const isEditing = ref(false)
+const isCollapsed = ref(true) // 默认折叠主题列表
 
 const theme = reactive({
     name: '',
@@ -399,15 +398,21 @@ function applyThemeVariables(variables) {
 function editTheme(key) {
     const themeData = getThemeData(key)
     if (!themeData) return
-    
+
     isEditing.value = true
     themeKeyInput.value = key
     theme.name = themeData.name
     theme.icon = themeData.icon
     theme.variables = { ...themeData.variables }
-    
-    // 滚动到表单
+
+    // 展开列表并滚动到表单
+    isCollapsed.value = false
     document.querySelector('.theme-form')?.scrollIntoView({ behavior: 'smooth' })
+}
+
+// 切换折叠状态
+function toggleCollapse() {
+    isCollapsed.value = !isCollapsed.value
 }
 
 // 监听当前主题变化，自动加载编辑
@@ -450,11 +455,90 @@ onMounted(() => {
 .theme-list-section {
     margin-bottom: 2rem;
 
-    h2 {
-        font-size: 1.3rem;
-        margin-bottom: 1rem;
-        color: var(--primary-color);
+    .theme-list-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1rem;
+        background: var(--bg-color);
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        cursor: pointer;
+        transition: var(--transition-base);
+
+        &:hover {
+            border-color: var(--primary-color);
+            box-shadow: var(--shadow-sm);
+        }
+
+        h2 {
+            margin: 0;
+            font-size: 1.3rem;
+            color: var(--primary-color);
+        }
     }
+
+    .theme-list-summary {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        font-size: 0.9rem;
+        color: var(--text-secondary-color);
+
+        .theme-count {
+            white-space: nowrap;
+        }
+
+        .current-theme {
+            white-space: nowrap;
+
+            strong {
+                color: var(--primary-color);
+            }
+        }
+
+        .collapse-icon {
+            font-size: 0.8rem;
+            transition: transform 0.2s ease;
+
+            &.collapsed {
+                transform: rotate(-90deg);
+            }
+        }
+    }
+}
+
+.theme-list-wrapper {
+    padding-top: 1rem;
+}
+
+// 折叠动画
+.collapse-enter-active,
+.collapse-leave-active {
+    overflow: hidden;
+    transition:
+        max-height 0.3s ease,
+        opacity 0.3s ease;
+}
+
+.collapse-enter-from {
+    max-height: 0;
+    opacity: 0;
+}
+
+.collapse-enter-to {
+    max-height: 1000px;
+    opacity: 1;
+}
+
+.collapse-leave-from {
+    max-height: 1000px;
+    opacity: 1;
+}
+
+.collapse-leave-to {
+    max-height: 0;
+    opacity: 0;
 }
 
 .theme-list {
@@ -533,18 +617,51 @@ onMounted(() => {
     }
 }
 
-.btn-delete {
+.btn-edit {
     padding: 0.4rem 0.7rem;
-    background: transparent;
+    background: var(--secondary-color);
     border: 1px solid var(--border-color);
     border-radius: 6px;
     cursor: pointer;
     font-size: 1rem;
     transition: var(--transition-base);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    &:hover {
+        background: var(--hover-bg-color);
+        border-color: var(--primary-color);
+        color: var(--primary-color);
+    }
+
+    svg {
+        width: 16px;
+        height: 16px;
+    }
+}
+
+.btn-delete {
+    padding: 0.4rem 0.7rem;
+    background: var(--secondary-color);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: var(--transition-base);
+    display: flex;
+    align-items: center;
+    justify-content: center;
 
     &:hover {
         background: var(--error-bg-color);
         border-color: var(--error-border-color);
+        color: var(--error-color);
+    }
+
+    svg {
+        width: 16px;
+        height: 16px;
     }
 }
 
@@ -782,7 +899,7 @@ onMounted(() => {
 
 .btn-save {
     background: var(--primary-color);
-    color: white;
+    color: var(--text-color);
 
     &:hover {
         background: var(--selected-color);
@@ -791,7 +908,7 @@ onMounted(() => {
 
 .btn-preview {
     background: var(--secondary-color);
-    color: white;
+    color: var(--text-color);
 }
 
 .btn-reset {
