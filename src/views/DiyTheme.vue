@@ -22,7 +22,8 @@
                 <div v-show="!isCollapsed" class="theme-list-wrapper">
                     <div class="theme-list">
                         <div v-for="themeItem in allThemes" :key="themeItem.key"
-                            :class="['theme-item', { active: currentThemeKey === themeItem.key }]">
+                            :class="['theme-item', { active: currentThemeKey === themeItem.key }]"
+                            @click="setTheme(themeItem.key)">
                             <div class="theme-info">
                                 <span class="theme-icon">{{ themeItem.icon }}</span>
                                 <div class="theme-meta">
@@ -58,16 +59,85 @@
                         <button @click="resetAllThemesAction" class="btn-restore">
                             重置所有主题为默认
                         </button>
+                        <button @click="exportThemesAction" class="btn-export">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+                                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                <polyline points="7 10 12 15 17 10"></polyline>
+                                <line x1="12" y1="15" x2="12" y2="3"></line>
+                            </svg>
+                            导出主题
+                        </button>
+                        <button @click="triggerImport" class="btn-import">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+                                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                <polyline points="17 8 12 3 7 8"></polyline>
+                                <line x1="12" y1="3" x2="12" y2="15"></line>
+                            </svg>
+                            导入主题
+                        </button>
+                        <button @click="createNewTheme" class="btn-create">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+                                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round">
+                                <line x1="12" y1="5" x2="12" y2="19"></line>
+                                <line x1="5" y1="12" x2="19" y2="12"></line>
+                            </svg>
+                            创建新主题
+                        </button>
                     </div>
                 </div>
             </transition>
         </div>
 
+        <!-- 导入弹窗 -->
+        <transition name="fade">
+            <div v-if="showImportModal" class="modal-overlay" @click.self="closeImportModal">
+                <div class="import-modal">
+                    <div class="modal-header">
+                        <h3>导入主题</h3>
+                        <button @click="closeImportModal" class="btn-modal-close">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+                                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round">
+                                <line x1="18" y1="6" x2="6" y2="18"></line>
+                                <line x1="6" y1="6" x2="18" y2="18"></line>
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="modal-body">
+                        <p class="import-hint">粘贴从导出功能获得的 JSON 数据：</p>
+                        <textarea v-model="importJsonInput" class="import-textarea"
+                            placeholder='{"version": "1.0", "themes": [...]}'></textarea>
+                        <div v-if="importError" class="import-error">{{ importError }}</div>
+                    </div>
+                    <div class="modal-footer">
+                        <button @click="closeImportModal" class="btn-modal-cancel">取消</button>
+                        <button @click="confirmImport" class="btn-modal-confirm">确认导入</button>
+                    </div>
+                </div>
+            </div>
+        </transition>
+
         <hr class="divider">
 
         <!-- 创建/编辑主题表单 -->
-        <div class="theme-form">
-            <h2>{{ isEditing ? '编辑主题' : '创建新主题' }}</h2>
+        <transition name="form-fade">
+            <div v-if="showForm" class="theme-form">
+                <div class="theme-form-header">
+                    <h2>{{ isEditing ? '编辑主题' : '创建新主题' }}</h2>
+                    <button @click="closeForm" class="btn-close" title="关闭表单">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+                            fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                            stroke-linejoin="round">
+                            <line x1="18" y1="6" x2="6" y2="18"></line>
+                            <line x1="6" y1="6" x2="18" y2="18"></line>
+                        </svg>
+                    </button>
+                </div>
 
             <div class="form-section">
                 <h3>基本信息</h3>
@@ -150,11 +220,12 @@
                 {{ message }}
             </div>
         </div>
+        </transition>
     </div>
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted, watch } from 'vue'
+import { ref, reactive, computed, onMounted, watch, nextTick, onUnmounted } from 'vue'
 import {
     getAllThemes,
     getCurrentTheme,
@@ -162,7 +233,10 @@ import {
     getThemeData,
     saveTheme,
     deleteTheme,
-    resetAllThemes
+    resetAllThemes,
+    exportThemes,
+    importThemes,
+    onThemeChange
 } from '../styles/ThemeManager'
 
 // CSS 变量分类
@@ -226,7 +300,8 @@ const allThemesObj = ref({})
 const currentThemeKey = ref('')
 const themeKeyInput = ref('')
 const isEditing = ref(false)
-const isCollapsed = ref(true) // 默认折叠主题列表
+const isCollapsed = ref(false) // 默认展开主题列表
+const showForm = ref(false) // 默认隐藏表单
 
 const theme = reactive({
     name: '',
@@ -236,6 +311,11 @@ const theme = reactive({
 
 const message = ref('')
 const messageType = ref('success')
+
+// 导入相关状态
+const showImportModal = ref(false)
+const importJsonInput = ref('')
+const importError = ref('')
 
 // 计算属性
 const coreColors = computed(() => {
@@ -290,7 +370,7 @@ function onColorChange() {
 // 应用主题
 function selectTheme(key) {
     setTheme(key)
-    currentThemeKey.value = key
+    // 事件监听器会自动更新 currentThemeKey
     const themeMeta = allThemes.value.find(t => t.key === key)
     message.value = `已切换到主题 "${themeMeta?.name || key}"`
     messageType.value = 'success'
@@ -301,7 +381,7 @@ function confirmDelete(key) {
     const themeMeta = allThemes.value.find(t => t.key === key)
     if (confirm(`确定要删除主题 "${themeMeta?.name}" 吗？此操作不可恢复。`)) {
         deleteTheme(key)
-        loadThemes()
+        // 事件监听器会自动更新主题列表
         message.value = `主题 "${themeMeta?.name}" 已删除`
         messageType.value = 'success'
 
@@ -323,7 +403,6 @@ function deleteCurrentTheme() {
 function resetAllThemesAction() {
     if (confirm('确定要重置所有主题为默认值吗？这将删除所有自定义主题。')) {
         resetAllThemes()
-        loadThemes()
         resetForm()
         message.value = '所有主题已重置为默认值'
         messageType.value = 'success'
@@ -358,8 +437,8 @@ function saveThemeAction() {
     }
 
     saveTheme(themeKey, themeData)
+    // 事件监听器会自动更新主题列表
 
-    loadThemes()
     message.value = `主题 "${theme.name}" 已保存！`
     messageType.value = 'success'
 
@@ -368,6 +447,9 @@ function saveThemeAction() {
         isEditing.value = true
         themeKeyInput.value = themeKey
     }
+
+    // 保存后收起表单
+    showForm.value = false
 }
 
 // 预览主题
@@ -405,9 +487,12 @@ function editTheme(key) {
     theme.icon = themeData.icon
     theme.variables = { ...themeData.variables }
 
-    // 展开列表并滚动到表单
+    // 展开列表并显示表单
     isCollapsed.value = false
-    document.querySelector('.theme-form')?.scrollIntoView({ behavior: 'smooth' })
+    showForm.value = true
+    nextTick(() => {
+        document.querySelector('.theme-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    })
 }
 
 // 切换折叠状态
@@ -415,14 +500,89 @@ function toggleCollapse() {
     isCollapsed.value = !isCollapsed.value
 }
 
+// 创建新主题
+function createNewTheme() {
+    resetForm()
+    isCollapsed.value = false
+    showForm.value = true
+    nextTick(() => {
+        document.querySelector('.theme-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    })
+}
+
+// 关闭表单
+function closeForm() {
+    showForm.value = false
+    resetForm()
+}
+
+// 导出主题
+function exportThemesAction() {
+    const jsonData = exportThemes()
+    const blob = new Blob([jsonData], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `themes-export-${new Date().toISOString().slice(0, 10)}.json`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(url)
+
+    message.value = '主题已导出'
+    messageType.value = 'success'
+}
+
+// 触发导入
+function triggerImport() {
+    showImportModal.value = true
+    importJsonInput.value = ''
+    importError.value = ''
+}
+
+// 关闭导入弹窗
+function closeImportModal() {
+    showImportModal.value = false
+    importJsonInput.value = ''
+    importError.value = ''
+}
+
+// 确认导入
+function confirmImport() {
+    if (!importJsonInput.value.trim()) {
+        importError.value = '请输入 JSON 数据'
+        return
+    }
+
+    const result = importThemes(importJsonInput.value)
+    if (result.success) {
+        // 事件监听器会自动更新主题列表
+        message.value = result.message
+        messageType.value = 'success'
+        closeImportModal()
+    } else {
+        importError.value = result.message
+    }
+}
+
 // 监听当前主题变化，自动加载编辑
-watch(currentThemeKey, () => {
+watch(getCurrentTheme(), () => {
     loadThemes()
 })
 
 onMounted(() => {
     loadThemes()
     resetForm()
+    
+    // 监听主题变更事件，自动刷新列表
+    const unsubscribe = onThemeChange(({ themeKey, themes }) => {
+        allThemes.value = themes
+        allThemesObj.value = Object.fromEntries(themes.map(t => [t.key, { name: t.name, icon: t.icon }]))
+        currentThemeKey.value = themeKey
+    })
+    
+    // 组件卸载时取消监听
+    onUnmounted(unsubscribe)
 })
 </script>
 
@@ -684,21 +844,92 @@ onMounted(() => {
 
 .theme-list-actions {
     margin-top: 1rem;
+    display: flex;
+    gap: 0.75rem;
 
     .btn-restore {
         padding: 0.6rem 1.2rem;
         background: var(--bg-secondary-color);
-        color: var(--description-color);
+        color: var(--text-secondary-color);
         border: 1px solid var(--border-light-color);
         border-radius: 8px;
         cursor: pointer;
         font-size: 0.9rem;
         transition: var(--transition-base);
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
 
         &:hover {
             background: var(--hover-bg-color);
             border-color: var(--warning-color);
             color: var(--warning-color);
+        }
+    }
+
+    .btn-export {
+        padding: 0.6rem 1.2rem;
+        background: var(--bg-secondary-color);
+        color: var(--text-secondary-color);
+        border: 1px solid var(--border-light-color);
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 0.9rem;
+        transition: var(--transition-base);
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+
+        &:hover {
+            background: var(--hover-bg-color);
+            border-color: var(--primary-color);
+            color: var(--primary-color);
+        }
+    }
+
+    .btn-import {
+        padding: 0.6rem 1.2rem;
+        background: var(--bg-secondary-color);
+        color: var(--text-secondary-color);
+        border: 1px solid var(--border-light-color);
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 0.9rem;
+        transition: var(--transition-base);
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+
+        &:hover {
+            background: var(--hover-bg-color);
+            border-color: var(--success-color);
+            color: var(--success-color);
+        }
+    }
+
+    .btn-create {
+        padding: 0.6rem 1.2rem;
+        background: var(--primary-color);
+        color: var(--text-color);
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 0.9rem;
+        font-weight: 600;
+        transition: var(--transition-base);
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+
+        &:hover {
+            background: var(--selected-color);
+            box-shadow: var(--shadow-sm);
+            transform: translateY(-1px);
+        }
+
+        svg {
+            width: 16px;
+            height: 16px;
         }
     }
 }
@@ -719,10 +950,35 @@ onMounted(() => {
     border: 1px solid var(--border-light-color);
     transition: var(--transition-base);
 
-    h2 {
-        font-size: 1.3rem;
+    .theme-form-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
         margin-bottom: 1.5rem;
-        color: var(--primary-color);
+
+        h2 {
+            font-size: 1.3rem;
+            margin: 0;
+            color: var(--primary-color);
+        }
+    }
+
+    .btn-close {
+        background: transparent;
+        border: none;
+        cursor: pointer;
+        padding: 0.4rem;
+        border-radius: 6px;
+        color: var(--meta-color);
+        transition: var(--transition-base);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+
+        &:hover {
+            background: var(--error-bg-color);
+            color: var(--error-color);
+        }
     }
 
     h3 {
@@ -962,5 +1218,173 @@ onMounted(() => {
         opacity: 1;
         transform: translateY(0);
     }
+}
+
+// 表单淡入淡出动画
+.form-fade-enter-active,
+.form-fade-leave-active {
+    transition:
+        opacity var(--anim-duration) var(--anim-easing),
+        transform var(--anim-duration) var(--anim-easing);
+}
+
+.form-fade-enter-from {
+    opacity: 0;
+    transform: translateY(var(--anim-translate-y));
+}
+
+.form-fade-enter-to {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+// 导入弹窗样式
+.fade-enter-active,
+.fade-leave-active {
+    transition: opacity var(--anim-duration) var(--anim-easing);
+}
+
+.fade-enter-from,
+.fade-leave-to {
+    opacity: 0;
+}
+
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.import-modal {
+    background: var(--bg-color);
+    border-radius: 12px;
+    padding: 1.5rem;
+    width: 90%;
+    max-width: 600px;
+    max-height: 80vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: var(--shadow-lg);
+
+    .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1rem;
+
+        h3 {
+            margin: 0;
+            font-size: 1.2rem;
+            color: var(--primary-color);
+        }
+
+        .btn-modal-close {
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            padding: 0.4rem;
+            border-radius: 6px;
+            color: var(--meta-color);
+            transition: var(--transition-base);
+
+            &:hover {
+                background: var(--error-bg-color);
+                color: var(--error-color);
+            }
+        }
+    }
+
+    .modal-body {
+        flex: 1;
+        overflow: auto;
+
+        .import-hint {
+            margin-bottom: 0.75rem;
+            color: var(--text-secondary-color);
+            font-size: 0.9rem;
+        }
+
+        .import-textarea {
+            width: 100%;
+            min-height: 200px;
+            padding: 0.75rem;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 0.85rem;
+            background: var(--bg-secondary-color);
+            color: var(--text-color);
+            resize: vertical;
+
+            &:focus {
+                outline: none;
+                border-color: var(--primary-color);
+                box-shadow: var(--shadow-primary);
+            }
+        }
+
+        .import-error {
+            margin-top: 0.75rem;
+            padding: 0.5rem;
+            background: var(--error-bg-color);
+            color: var(--error-text-color);
+            border-radius: 6px;
+            font-size: 0.85rem;
+        }
+    }
+
+    .modal-footer {
+        display: flex;
+        justify-content: flex-end;
+        gap: 0.75rem;
+        margin-top: 1rem;
+
+        .btn-modal-cancel {
+            padding: 0.6rem 1.2rem;
+            background: var(--bg-secondary-color);
+            color: var(--text-secondary-color);
+            border: 1px solid var(--border-light-color);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: var(--transition-base);
+
+            &:hover {
+                background: var(--hover-bg-color);
+            }
+        }
+
+        .btn-modal-confirm {
+            padding: 0.6rem 1.2rem;
+            background: var(--primary-color);
+            color: var(--text-color);
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: var(--transition-base);
+
+            &:hover {
+                background: var(--selected-color);
+                box-shadow: var(--shadow-sm);
+            }
+        }
+    }
+}
+
+.form-fade-leave-from {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.form-fade-leave-to {
+    opacity: 0;
+    transform: translateY(var(--anim-translate-y));
 }
 </style>

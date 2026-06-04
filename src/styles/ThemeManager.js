@@ -2,6 +2,41 @@
 // 所有主题都存储到 localStorage 的数组中
 // 提供主题的加载、切换、持久化、删除功能
 
+// 主题变更事件名
+export const THEME_CHANGE_EVENT = 'theme-change'
+
+// 创建全局事件目标，用于在应用内广播主题变更
+const themeEventTarget = new EventTarget()
+
+/**
+ * 监听主题变更
+ * @param {Function} callback - 回调函数，接收 { themeKey, themes } 参数
+ * @returns {Function} 取消监听函数
+ */
+export function onThemeChange(callback) {
+  const handler = (e) => callback(e.detail)
+  themeEventTarget.addEventListener(THEME_CHANGE_EVENT, handler)
+  return () => {
+    themeEventTarget.removeEventListener(THEME_CHANGE_EVENT, handler)
+  }
+}
+
+/**
+ * 触发主题变更事件
+ * @param {string} themeKey - 当前主题 key
+ */
+function dispatchThemeChange(themeKey) {
+  const themes = getThemes()
+  themeEventTarget.dispatchEvent(new CustomEvent(THEME_CHANGE_EVENT, {
+    detail: { themeKey, themes }
+  }))
+  // 同时触发 storage 事件，支持跨标签页同步
+  window.dispatchEvent(new StorageEvent('storage', {
+    key: 'currentTheme',
+    newValue: themeKey
+  }))
+}
+
 // 默认主题定义（首次使用时写入 localStorage）
 const DEFAULT_THEMES = [
   {
@@ -96,40 +131,40 @@ const DEFAULT_THEMES = [
     icon: '🌲',
     variables: {
       // --- 核心配色 ---
-      '--primary-color': '#5cb87a',
-      '--secondary-color': '#8fb85d',
-      '--bg-color': '#f5f7f3',
-      '--bg-secondary-color': '#ffffff',
-      '--text-color': '#2d3a2f',
-      '--text-secondary-color': '#4a5a4d',
+      "--primary-color": "#6fbf4c",
+      "--secondary-color": "#8bc6a5",
+      "--bg-color": "#1e2a24",
+      "--bg-secondary-color": "#2a3a32",
+      "--text-color": "#e2f0e6",
+      "--text-secondary-color": "#bdd6c4",
 
       // --- 状态色 ---
-      '--selected-color': '#4a9d6a',
-      '--selected-bg-color': 'rgba(92, 184, 122, 0.12)',
-      '--hover-bg-color': 'rgba(92, 184, 122, 0.08)',
+      "--selected-color": "#7ed56f",
+      "--selected-bg-color": "rgba(111, 191, 76, 0.18)",
+      "--hover-bg-color": "rgba(111, 191, 76, 0.1)",
 
       // --- 功能色 ---
-      '--meta-color': '#889988',
-      '--description-color': '#6a8b5d',
-      '--border-color': 'rgba(143, 184, 93, 0.2)',
-      '--border-light-color': 'rgba(143, 184, 93, 0.1)',
-      '--tag-bg-color': 'rgba(92, 184, 122, 0.15)',
-      '--tag-text-color': '#5cb87a',
+      "--meta-color": "#8aa89a",
+      "--description-color": "#9bc4ab",
+      "--border-color": "rgba(139, 198, 165, 0.25)",
+      "--border-light-color": "rgba(139, 198, 165, 0.12)",
+      "--tag-bg-color": "rgba(111, 191, 76, 0.2)",
+      "--tag-text-color": "#8fda6b",
 
       // --- 阴影 ---
-      '--shadow-sm': '0 1px 3px rgba(143, 184, 93, 0.08)',
-      '--shadow-md': '0 4px 12px rgba(143, 184, 93, 0.12)',
-      '--shadow-lg': '0 6px 20px rgba(143, 184, 93, 0.18)',
-      '--shadow-primary': '0 4px 16px rgba(92, 184, 122, 0.25)',
+      "--shadow-sm": "0 1px 3px rgba(0, 0, 0, 0.25)",
+      "--shadow-md": "0 4px 12px rgba(0, 0, 0, 0.35)",
+      "--shadow-lg": "0 6px 20px rgba(0, 0, 0, 0.45)",
+      "--shadow-primary": "0 4px 16px rgba(111, 191, 76, 0.3)",
 
       // --- 动画变量 ---
-      '--anim-duration': '0.3s',
-      '--anim-easing': 'cubic-bezier(0.25, 0.8, 0.25, 1)',
-      '--anim-translate-y': '20px',
-      '--transition-bg-color': 'background-color 0.3s ease',
-      '--transition-base': 'all 0.3s ease',
-      '--transition-shadow': 'box-shadow 0.3s ease',
-      '--transition-transform': 'transform 0.3s ease'
+      "--anim-duration": "0.3s",
+      "--anim-easing": "cubic-bezier(0.25, 0.8, 0.25, 1)",
+      "--anim-translate-y": "20px",
+      "--transition-bg-color": "background-color 0.3s ease",
+      "--transition-base": "all 0.3s ease",
+      "--transition-shadow": "box-shadow 0.3s ease",
+      "--transition-transform": "transform 0.3s ease"
     }
   },
 
@@ -283,6 +318,7 @@ export function setTheme(themeKey) {
 
   localStorage.setItem(CURRENT_THEME_KEY, themeKey)
   applyTheme(themeKey)
+  dispatchThemeChange(themeKey)
 }
 
 /**
@@ -328,6 +364,7 @@ export function saveTheme(themeKey, themeData) {
   }
 
   saveThemes(themes)
+  dispatchThemeChange(getCurrentTheme())
 }
 
 /**
@@ -348,6 +385,8 @@ export function deleteTheme(themeKey) {
 
   if (localStorage.getItem(CURRENT_THEME_KEY) === themeKey) {
     setTheme(DEFAULT_THEME_KEY)
+  } else {
+    dispatchThemeChange(getCurrentTheme())
   }
 
   return true
@@ -368,5 +407,75 @@ export function getAllThemes() {
 export function resetAllThemes() {
   const themes = [...DEFAULT_THEMES]
   saveThemes(themes)
+  dispatchThemeChange(getCurrentTheme())
   return themes
+}
+
+/**
+ * 导出所有主题为 JSON 字符串
+ * @returns {string} JSON 格式的主题数据
+ */
+export function exportThemes() {
+  const themes = getThemes()
+  const currentTheme = getCurrentTheme()
+  const exportData = {
+    version: '1.0',
+    exportTime: Date.now(),
+    currentTheme,
+    themes
+  }
+  return JSON.stringify(exportData, null, 2)
+}
+
+/**
+ * 从 JSON 字符串导入主题
+ * @param {string} jsonStr - JSON 格式的主题数据
+ * @returns {Object} 导入结果 {success: boolean, message: string, importedCount: number}
+ */
+export function importThemes(jsonStr) {
+  try {
+    const importData = JSON.parse(jsonStr)
+
+    // 验证数据格式
+    if (!importData.version || !Array.isArray(importData.themes)) {
+      return {
+        success: false,
+        message: '无效的导入数据格式：缺少 version 或 themes 字段'
+      }
+    }
+
+    const currentThemes = getThemes()
+    const importedThemes = importData.themes
+
+    // 合并主题（导入的主题覆盖现有主题）
+    const themeMap = new Map(currentThemes.map(t => [t.key, t]))
+    let importedCount = 0
+
+    for (const theme of importedThemes) {
+      if (!theme.key || !theme.name || !theme.variables) {
+        continue
+      }
+      themeMap.set(theme.key, theme)
+      importedCount++
+    }
+
+    const mergedThemes = Array.from(themeMap.values())
+    saveThemes(mergedThemes)
+
+    // 如果导入数据中指定了当前主题，且该主题存在，则切换过去
+    if (importData.currentTheme && mergedThemes.some(t => t.key === importData.currentTheme)) {
+      setTheme(importData.currentTheme)
+    }
+
+    return {
+      success: true,
+      message: `成功导入 ${importedCount} 个主题`,
+      importedCount
+    }
+  } catch (e) {
+    return {
+      success: false,
+      message: `导入失败：${e.message}`
+    }
+  }
 }

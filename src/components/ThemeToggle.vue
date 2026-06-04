@@ -7,12 +7,8 @@
         </button>
         <!-- 主题选择下拉菜单 -->
         <div v-if="showPicker" class="theme-picker">
-            <button
-                v-for="(theme, key) in availableThemes"
-                :key="key"
-                @click="selectTheme(key)"
-                :class="['theme-option', { active: currentTheme === key }]"
-            >
+            <button v-for="(theme, key) in availableThemes" :key="key" @click="selectTheme(key)"
+                :class="['theme-option', { active: currentTheme === key }]">
                 <span class="theme-option-icon">{{ theme.icon }}</span>
                 <span class="theme-option-name">{{ theme.name }}</span>
             </button>
@@ -22,12 +18,12 @@
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue';
-import { getAvailableThemes, getThemeMeta, getCurrentTheme, setTheme, getAllThemes } from '../styles/ThemeManager';
+import { getAvailableThemes, getThemeMeta, getCurrentTheme, setTheme, getAllThemes, onThemeChange } from '../styles/ThemeManager';
 
 // 可用主题配置（从 ThemeManager 获取）
 const availableThemes = ref({});
 
-const currentTheme = ref(getCurrentTheme()||'');
+const currentTheme = ref(getCurrentTheme() || '');
 const showPicker = ref(false);
 
 // 当前主题名称
@@ -65,24 +61,20 @@ function handleClickOutside(e) {
 function validateCurrentTheme() {
     const allThemes = getAllThemes();
     const themeExists = allThemes.some(t => t.key === currentTheme.value);
-    
+
     if (!themeExists) {
         // 当前主题已被删除，清空选择（不自动切换默认主题）
         currentTheme.value = '';
     }
 }
 
-// 监听 localStorage 变化（其他标签页或手动修改）
-function handleStorageChange(e) {
-    if (e.key === 'app-theme' || e.key === 'app-themes') {
-        const newTheme = getCurrentTheme();
-        validateCurrentTheme();
-        if (currentTheme.value !== newTheme && currentTheme.value !== '') {
-            currentTheme.value = newTheme;
-        }
-        availableThemes.value = getAvailableThemes();
+// 监听主题变化（例如在其他标签页修改了主题）
+const removeThemeChange = onThemeChange(() => {
+    const newTheme = getCurrentTheme();
+    if (newTheme !== currentTheme.value) {
+        currentTheme.value = newTheme;
     }
-}
+});
 
 onMounted(() => {
     // 加载主题列表
@@ -90,12 +82,11 @@ onMounted(() => {
     currentTheme.value = getCurrentTheme();
     validateCurrentTheme();
     document.addEventListener('click', handleClickOutside);
-    window.addEventListener('storage', handleStorageChange);
 });
 
 onUnmounted(() => {
     document.removeEventListener('click', handleClickOutside);
-    window.removeEventListener('storage', handleStorageChange);
+    removeThemeChange();
 });
 </script>
 

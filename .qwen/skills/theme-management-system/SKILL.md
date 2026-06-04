@@ -101,13 +101,16 @@ initTheme()
 | `restoreDefaultTheme(key?)` | 恢复默认主题（不传 key 则恢复全部） |
 | `resetAllThemes()` | 重置所有主题为默认值 |
 | `isDefaultTheme(key)` | 检查是否为默认主题 |
+| `exportThemes()` | 导出所有主题为 JSON 字符串（含当前主题） |
+| `importThemes(jsonStr)` | 从 JSON 字符串导入主题（合并策略） |
 
 ### 存储结构
 
 ```javascript
 // localStorage['app-themes']
-{
-  "sakura": {
+[
+  {
+    "key": "sakura",
     "name": "樱花粉",
     "icon": "🌸",
     "variables": {
@@ -116,16 +119,172 @@ initTheme()
       // ...
     }
   },
-  "custom_my_theme": {
+  {
+    "key": "custom_my_theme",
     "name": "我的主题",
     "icon": "✨",
     "variables": { ... }
   }
-}
+]
 
 // localStorage['app-theme']
 "sakura"  // 当前选中的主题 key
 ```
+
+### 导入导出功能
+
+#### 导出格式
+
+导出的 JSON 包含版本信息、导出时间、当前主题和所有主题数据：
+
+```javascript
+// exportThemes() 返回的 JSON 格式
+{
+  "version": "1.0",
+  "exportTime": 1717500000000,
+  "currentTheme": "sakura",
+  "themes": [
+    {
+      "key": "sakura",
+      "name": "樱花粉",
+      "icon": "🌸",
+      "variables": { ... }
+    },
+    // ... 其他主题
+  ]
+}
+```
+
+#### 导入策略
+
+导入时采用**合并策略**：
+- 保留现有主题
+- 导入的主题覆盖同 key 的主题
+- 自动切换到导入数据中指定的当前主题（如果存在）
+
+```javascript
+// importThemes(jsonStr) 实现
+export function importThemes(jsonStr) {
+  try {
+    const importData = JSON.parse(jsonStr)
+    
+    // 验证数据格式
+    if (!importData.version || !Array.isArray(importData.themes)) {
+      return {
+        success: false,
+        message: '无效的导入数据格式：缺少 version 或 themes 字段'
+      }
+    }
+
+    const currentThemes = getThemes()
+    const themeMap = new Map(currentThemes.map(t => [t.key, t]))
+    let importedCount = 0
+
+    // 合并主题（导入的覆盖现有）
+    for (const theme of importData.themes) {
+      if (!theme.key || !theme.name || !theme.variables) continue
+      themeMap.set(theme.key, theme)
+      importedCount++
+    }
+
+    saveThemes(Array.from(themeMap.values()))
+
+    // 切换当前主题
+    if (importData.currentTheme && 
+        mergedThemes.some(t => t.key === importData.currentTheme)) {
+      setTheme(importData.currentTheme)
+    }
+
+    return {
+      success: true,
+      message: `成功导入 ${importedCount} 个主题`,
+      importedCount
+    }
+  } catch (e) {
+    return {
+      success: false,
+      message: `导入失败：${e.message}`
+    }
+  }
+}
+```
+
+#### UI 实现模式
+
+**导出按钮**：
+
+```vue
+<button @click="exportThemesAction" class="btn-export">
+  <svg>...</svg>
+  导出主题
+</button>
+
+<script setup>
+function exportThemesAction() {
+  const jsonData = exportThemes()
+  const blob = new Blob([jsonData], { type: 'application/json' })
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = `themes-export-${new Date().toISOString().slice(0, 10)}.json`
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+  URL.revokeObjectURL(url)
+}
+</script>
+```
+
+**导入弹窗**：
+
+```vue
+<!-- 导入弹窗 -->
+<transition name="fade">
+  <div v-if="showImportModal" class="modal-overlay" @click.self="closeImportModal">
+    <div class="import-modal">
+      <div class="modal-header">
+        <h3>导入主题</h3>
+        <button @click="closeImportModal" class="btn-modal-close">✕</button>
+      </div>
+      <div class="modal-body">
+        <p>粘贴从导出功能获得的 JSON 数据：</p>
+        <textarea v-model="importJsonInput" 
+                  placeholder='{"version": "1.0", "themes": [...]}'></textarea>
+        <div v-if="importError" class="import-error">{{ importError }}</div>
+      </div>
+      <div class="modal-footer">
+        <button @click="closeImportModal">取消</button>
+        <button @click="confirmImport">确认导入</button>
+      </div>
+    </div>
+  </div>
+</transition>
+
+<script setup>
+function confirmImport() {
+  if (!importJsonInput.value.trim()) {
+    importError.value = '请输入 JSON 数据'
+    return
+  }
+
+  const result = importThemes(importJsonInput.value)
+  if (result.success) {
+    loadThemes()
+    message.value = result.message
+    closeImportModal()
+  } else {
+    importError.value = result.message
+  }
+}
+</script>
+```
+
+### 导入导出适用场景
+
+- **备份恢复**：用户可备份主题配置，防止丢失
+- **跨设备同步**：导出文件可在不同设备间导入
+- **主题分享**：用户可分享自定义主题给他人
+- **批量迁移**：一次性导入多个主题
 
 ### 注意事项
 
