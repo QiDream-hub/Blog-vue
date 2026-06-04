@@ -3,7 +3,7 @@
     <footer class="app-footer">
         <div class="footer-content">
             <div class="footer-section footer-brand">
-                <h3 class="footer-logo">📝 My Blog</h3>
+                <h3 class="footer-logo">📝 QDream Blog</h3>
                 <p class="footer-desc">记录技术点滴，分享思考与成长。</p>
             </div>
 

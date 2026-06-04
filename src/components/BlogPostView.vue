@@ -468,6 +468,8 @@ async function reRenderMermaidOnThemeChange() {
                     bindFunctions(block)
                 }
                 block.classList.add('mermaid-rendered')
+                // 重新添加切换按钮
+                addMermaidToggleButtons(block, decodeURIComponent(graphDefinition))
             } catch (error) {
                 console.error('Mermaid re-render error:', error)
             }
