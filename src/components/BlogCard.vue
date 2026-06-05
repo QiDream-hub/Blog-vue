@@ -25,6 +25,29 @@ import { useRouter } from 'vue-router'
 
 const router = useRouter()
 
+const props = defineProps({
+  cover: {
+    type: String,
+    default: ''
+  },
+  title: {
+    type: String,
+    required: true
+  },
+  excerpt: {
+    type: String,
+    default: ''
+  },
+  tags: {
+    type: Array,
+    default: () => []
+  },
+  to: {
+    type: String,
+    default: ''
+  }
+})
+
 const handleClick = () => {
   if (props.to) {
     router.push(props.to)

@@ -11,6 +11,20 @@
 </template>
 
 <script setup>
+const props = defineProps({
+  name: {
+    type: String,
+    required: true
+  },
+  description: {
+    type: String,
+    default: ''
+  },
+  count: {
+    type: Number,
+    default: undefined
+  }
+})
 </script>
 
 <style lang="scss" scoped>
