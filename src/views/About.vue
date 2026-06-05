@@ -76,8 +76,6 @@ graph TD
 
 <style lang="scss" scoped>
 .about-page {
-  background-color: var(--bg-color);
-  transition: var(--transition-bg-color);
   min-height: calc(100vh - 80px);
 }
 </style>
