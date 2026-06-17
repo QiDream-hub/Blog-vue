@@ -1387,4 +1387,252 @@ onMounted(() => {
     opacity: 0;
     transform: translateY(var(--anim-translate-y));
 }
+
+// 响应式布局
+@media (max-width: 768px) {
+    .diy-theme {
+        padding: 1rem;
+
+        h1 {
+            font-size: 1.5rem;
+        }
+
+        p {
+            font-size: 0.9rem;
+        }
+    }
+
+    // 主题列表头部响应式
+    .theme-list-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.75rem;
+
+        h2 {
+            font-size: 1.1rem;
+        }
+
+        .theme-list-summary {
+            flex-wrap: wrap;
+            font-size: 0.8rem;
+        }
+    }
+
+    // 主题项响应式
+    .theme-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.75rem;
+
+        .theme-actions {
+            width: 100%;
+            justify-content: flex-end;
+        }
+    }
+
+    // 主题列表操作按钮响应式
+    .theme-list-actions {
+        flex-wrap: wrap;
+
+        button {
+            flex: 1 1 auto;
+            min-width: calc(50% - 0.375rem);
+            justify-content: center;
+            font-size: 0.85rem;
+            padding: 0.5rem 0.8rem;
+
+            svg {
+                width: 14px;
+                height: 14px;
+            }
+        }
+    }
+
+    // 表单头部响应式
+    .theme-form {
+        padding: 1.25rem;
+
+        .theme-form-header {
+            h2 {
+                font-size: 1.1rem;
+            }
+        }
+    }
+
+    // 颜色网格响应式
+    .color-grid {
+        grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+        gap: 0.75rem;
+    }
+
+    .color-input-wrapper {
+        input[type="color"] {
+            width: 40px;
+            height: 32px;
+        }
+
+        .color-value {
+            font-size: 0.75rem;
+            padding: 0.2rem 0.4rem;
+            min-width: 60px;
+        }
+    }
+
+    // 表单操作按钮响应式
+    .form-actions {
+        flex-direction: column;
+
+        button {
+            width: 100%;
+            text-align: center;
+        }
+    }
+
+    // 导入弹窗响应式
+    .import-modal {
+        width: 95%;
+        padding: 1rem;
+        max-height: 90vh;
+
+        .modal-header {
+            h3 {
+                font-size: 1.1rem;
+            }
+        }
+
+        .modal-body {
+            .import-textarea {
+                min-height: 150px;
+                font-size: 0.8rem;
+            }
+        }
+
+        .modal-footer {
+            flex-direction: column;
+
+            button {
+                width: 100%;
+            }
+        }
+    }
+}
+
+@media (max-width: 480px) {
+    .diy-theme {
+        h1 {
+            font-size: 1.3rem;
+        }
+    }
+
+    // 主题列表头部在小屏幕上简化
+    .theme-list-header {
+        h2 {
+            font-size: 1rem;
+        }
+
+        .theme-list-summary {
+            .theme-count,
+            .current-theme {
+                display: block;
+                width: 100%;
+            }
+        }
+    }
+
+    // 颜色网格在小屏幕上更紧凑
+    .color-grid {
+        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+        gap: 0.5rem;
+    }
+
+    .color-picker-group {
+        label {
+            font-size: 0.8rem;
+        }
+    }
+
+    .color-input-wrapper {
+        input[type="color"] {
+            width: 36px;
+            height: 28px;
+        }
+
+        .color-value {
+            font-size: 0.7rem;
+            padding: 0.15rem 0.3rem;
+            min-width: 50px;
+        }
+    }
+
+    // 阴影输入框在小屏幕上优化
+    .shadow-input-wrapper {
+        input[type="text"] {
+            font-size: 0.8rem;
+            padding: 0.5rem 0.8rem;
+        }
+    }
+
+    // 主题项在小屏幕上的优化
+    .theme-item {
+        padding: 0.75rem;
+
+        .theme-icon {
+            font-size: 1.2rem;
+        }
+
+        .theme-meta {
+            .theme-name {
+                font-size: 0.9rem;
+            }
+
+            .theme-key {
+                font-size: 0.7rem;
+            }
+        }
+
+        .btn-edit,
+        .btn-delete {
+            padding: 0.3rem 0.5rem;
+
+            svg {
+                width: 14px;
+                height: 14px;
+            }
+        }
+    }
+
+    // 列表操作按钮在小屏幕上
+    .theme-list-actions {
+        button {
+            min-width: 100%;
+            font-size: 0.8rem;
+            padding: 0.5rem 0.6rem;
+        }
+    }
+}
+
+// 平板横屏优化
+@media (min-width: 769px) and (max-width: 1024px) {
+    .color-grid {
+        grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    }
+
+    .theme-list-actions {
+        button {
+            font-size: 0.85rem;
+            padding: 0.5rem 0.9rem;
+        }
+    }
+}
+
+// 大屏幕优化
+@media (min-width: 1200px) {
+    .diy-theme {
+        max-width: 1100px;
+    }
+
+    .color-grid {
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    }
+}
 </style>
