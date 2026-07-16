@@ -210,7 +210,8 @@ export class Publisher {
   /**
    * 注册图片
    * 在 lmjweb 中创建图片对象，并将文件移动到 imagesDir/{imagePtr}
-   * 
+   * 自动注册到全局图片集合
+   *
    * @param {string} filePath 图片文件路径
    * @param {string} [filename] 可选的原始文件名（用于元数据记录）
    * @returns {Promise<{ ptr: string, path: string, filename: string }>}
@@ -229,6 +230,9 @@ export class Publisher {
 
     // 移动文件到 imagesDir/{imagePtr}
     const destPath = this.#moveFileToDest(filePath, this.config.imagesDir, imagePtr)
+
+    // 自动注册到全局图片集合
+    await this.linkToImages(imagePtr)
 
     return {
       ptr: imagePtr,
@@ -475,10 +479,10 @@ export class Publisher {
 
   /**
    * 初始化博客
-   * 创建博客信息对象、文章集合、标签集合
-   * 
+   * 创建博客信息对象、文章集合、标签集合、图片集合
+   *
    * @param {string} title 博客名称
-   * @returns {Promise<{ blogPtr: string, postsPtr: string, tagsPtr: string }>}
+   * @returns {Promise<{ blogPtr: string, postsPtr: string, tagsPtr: string, imagesPtr: string }>}
    */
   async initBlog(title) {
     // 检查是否已存在
@@ -496,12 +500,58 @@ export class Publisher {
     // 创建标签集合
     const tagsPtr = await this.#createSet()
 
+    // 创建图片集合
+    const imagesPtr = await this.#createSet()
+
     // 设置博客信息
     await this.#setMember(blogPtr, 'title', title, 'raw')
     await this.#setMember(blogPtr, 'posts', postsPtr, 'ref')
     await this.#setMember(blogPtr, 'tags', tagsPtr, 'ref')
+    await this.#setMember(blogPtr, 'images', imagesPtr, 'ref')
 
-    return { blogPtr, postsPtr, tagsPtr }
+    return { blogPtr, postsPtr, tagsPtr, imagesPtr }
+  }
+
+  /**
+   * 将图片注册到全局图片集合
+   *
+   * @param {string} imagePtr 图片指针
+   */
+  async linkToImages(imagePtr) {
+    const blogInfo = await this.#getObject(this.config.blogInfoPtr)
+    const imagesPtr = blogInfo.members.find(m => m.name === 'images')?.value
+    if (!imagesPtr) {
+      throw new Error('博客图片集合不存在')
+    }
+    await this.#addElement(imagesPtr, imagePtr)
+  }
+
+  /**
+   * 获取所有已注册的文章
+   *
+   * @returns {Promise<string[]>} 文章指针列表
+   */
+  async getAllArticles() {
+    const blogInfo = await this.#getObject(this.config.blogInfoPtr)
+    const postsPtr = blogInfo.members.find(m => m.name === 'posts')?.value
+    if (!postsPtr) return []
+
+    const postsSet = await this.#getSet(postsPtr)
+    return (postsSet.elements || []).map(e => e.value)
+  }
+
+  /**
+   * 获取所有已注册的图片
+   *
+   * @returns {Promise<string[]>} 图片指针列表
+   */
+  async getAllImages() {
+    const blogInfo = await this.#getObject(this.config.blogInfoPtr)
+    const imagesPtr = blogInfo.members.find(m => m.name === 'images')?.value
+    if (!imagesPtr) return []
+
+    const imagesSet = await this.#getSet(imagesPtr)
+    return (imagesSet.elements || []).map(e => e.value)
   }
 }
 

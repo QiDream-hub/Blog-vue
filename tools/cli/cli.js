@@ -374,12 +374,50 @@ infoCmd
   .description('获取博客信息')
   .action(async (options, cmd) => {
     const publisher = createPublisher(cmd.parent.parent.opts().config)
-    
+
     try {
       const blogInfo = await publisher.getBlogInfo()
       console.log(JSON.stringify(blogInfo, null, 2))
     } catch (err) {
       console.error('✗ 获取失败:', err.message)
+      process.exit(1)
+    }
+  })
+
+// info list - 列出所有已注册内容
+infoCmd
+  .command('list')
+  .description('列出所有已注册内容')
+  .requiredOption('--type <type>', '类型 (articles|images)')
+  .action(async (options, cmd) => {
+    const publisher = createPublisher(cmd.parent.parent.opts().config)
+
+    try {
+      let items
+      let typeName
+
+      switch (options.type) {
+        case 'articles':
+          items = await publisher.getAllArticles()
+          typeName = '文章'
+          break
+        case 'images':
+          items = await publisher.getAllImages()
+          typeName = '图片'
+          break
+        default:
+          console.error('错误：请指定 --type articles|images')
+          process.exit(1)
+      }
+
+      console.log(`已注册的${typeName}: ${items.length} 个`)
+      if (items.length === 0) {
+        console.log('  (空)')
+      } else {
+        items.forEach(ptr => console.log(`  - ${ptr}`))
+      }
+    } catch (err) {
+      console.error('✗ 查询失败:', err.message)
       process.exit(1)
     }
   })
