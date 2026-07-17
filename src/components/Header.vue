@@ -3,9 +3,7 @@
   <header class="app-header">
     <!-- 左侧：Logo -->
     <div class="header-left">
-      <div class="logo" @click="$router.push('/')">
-        📝 QDream Blog
-      </div>
+      <Logo />
     </div>
 
     <!-- 中间：功能区（主题切换） -->
@@ -21,6 +19,7 @@
 </template>
 
 <script setup>
+import Logo from './Logo.vue';
 import Navbar from './Navbar.vue';
 import ThemeToggle from './ThemeToggle.vue';
 </script>
@@ -54,8 +53,11 @@ import ThemeToggle from './ThemeToggle.vue';
   align-items: center;
 
   .logo {
-    font-size: 1.55rem;
-    font-weight: 800;
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    font-size: 1.35rem;
+    font-weight: 700;
     color: var(--secondary-color);
     cursor: pointer;
     white-space: nowrap;
@@ -63,8 +65,23 @@ import ThemeToggle from './ThemeToggle.vue';
 
     &:hover {
       color: var(--selected-color);
-      transform: scale(1.04);
+      transform: scale(1.02);
+
+      .logo-icon {
+        transform: rotate(-5deg);
+      }
     }
+  }
+
+  .logo-icon {
+    width: 36px;
+    height: 36px;
+    flex-shrink: 0;
+    transition: transform 0.2s ease;
+  }
+
+  .logo-text {
+    line-height: 1;
   }
 
   @media (max-width: 768px) {

@@ -3,7 +3,7 @@
     <footer class="app-footer">
         <div class="footer-content">
             <div class="footer-section footer-brand">
-                <h3 class="footer-logo">📝 QDream Blog</h3>
+                <Logo :show-text="true" :clickable="true" />
                 <p class="footer-desc">记录技术点滴，分享思考与成长。</p>
             </div>
 
@@ -24,7 +24,7 @@
         </div>
 
         <div class="footer-bottom">
-            <p>&copy; {{ currentYear }} QDream Blog. 保留所有权利。</p>
+            <p>&copy; {{ currentYear }} 祁梦的小屋. 保留所有权利。</p>
             <p class="footer-copyright-extra">用心写代码，用爱写文章 ❤️</p>
         </div>
     </footer>
@@ -32,12 +32,14 @@
 
 <script setup>
 import { ref } from 'vue'
-import router from '@/router'
+import { useRouter } from 'vue-router'
+import Logo from './Logo.vue'
 
 // 获取当前年份
 const currentYear = ref(new Date().getFullYear())
 
 // 复用导航路由逻辑（与 Navbar 一致）
+const router = useRouter()
 const navRoutes = router.options.routes.filter(
     (route) => route.name && route.meta?.showInNav !== false
 )
@@ -101,19 +103,6 @@ const navRoutes = router.options.routes.filter(
         }
     }
 
-    .footer-logo {
-        font-size: 1.4rem;
-        font-weight: 700;
-        margin-bottom: 0.6rem;
-        color: var(--secondary-color);
-        cursor: pointer;
-        display: inline-block;
-
-        &:hover {
-            color: var(--primary-color);
-        }
-    }
-
     .footer-desc {
         font-size: 0.95rem;
         color: var(--secondary-color);
@@ -144,6 +133,12 @@ const navRoutes = router.options.routes.filter(
         .footer-content {
             flex-direction: column;
             text-align: center;
+        }
+
+        .footer-section {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
         }
 
         .footer-section h4,
