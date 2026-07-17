@@ -10,7 +10,11 @@ import AppHader from './components/Header.vue'
     </header>
 
     <main class="main-content ">
-      <router-view />
+      <router-view v-slot="{ Component }">
+        <keep-alive :include="['首页']">
+          <component :is="Component" />
+        </keep-alive>
+      </router-view>
     </main>
 
     <footer>
