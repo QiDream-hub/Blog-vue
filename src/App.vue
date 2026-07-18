@@ -11,9 +11,7 @@ import AppHader from './components/Header.vue'
 
     <main class="main-content ">
       <router-view v-slot="{ Component }">
-        <keep-alive :include="['首页']">
-          <component :is="Component" />
-        </keep-alive>
+        <component :is="Component" />
       </router-view>
     </main>
 

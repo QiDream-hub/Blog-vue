@@ -7,6 +7,25 @@
 
             <!-- 正常内容 -->
             <template v-else>
+                <!-- 刷新状态指示器 -->
+                <div class="refresh-indicator">
+                    <span v-if="refreshing" class="refresh-indicator__status refresh-indicator__status--refreshing">
+                        <span class="refresh-indicator__spinner"></span>
+                        更新中...
+                    </span>
+                    <span v-else class="refresh-indicator__status">
+                        已更新：{{ lastUpdated ? formatTime(lastUpdated) : '-' }}
+                    </span>
+                    <button 
+                        class="refresh-indicator__btn" 
+                        @click="refresh"
+                        :disabled="refreshing"
+                        title="手动刷新"
+                    >
+                        <span class="refresh-indicator__icon">↻</span>
+                    </button>
+                </div>
+
                 <div class="search-container">
                     <input type="text" v-model="searchText" placeholder="搜索标题或摘要..." />
                 </div>
@@ -44,67 +63,59 @@
 import BlogCard from '@/components/BlogCard.vue'
 import TagCard from '@/components/TagCard.vue'
 import LoadingSpinner from '@/components/LoadingSpinner.vue'
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import {
-    getBlogInfo,
-    getAllPostPtrs,
-    batchGetPosts,
-    batchGetTagsWithCount
-} from '@/api/lmjweb'
-import { getImageUrl } from '@/config/blog'
+import { useBlogCache } from '@/composables/useBlogCache'
+
+defineOptions({
+  name: '首页'
+})
 
 const router = useRouter()
 const searchText = ref('')
 const searchTag = ref([])
-const loading = ref(true)
-const tagsLoading = ref(true)
 
-const posts = ref([])
-const tags = ref([])
+// 使用博客缓存策略（5 分钟自动刷新）
+const {
+  posts,
+  tags,
+  loading,
+  tagsLoading,
+  refreshing,
+  lastUpdated,
+  error,
+  refresh
+} = useBlogCache(5 * 60 * 1000)
 
-const loadData = async () => {
+// 监听错误，无缓存时路由到错误页面
+let hasCachedData = false
 
-    try {
-        // 1. 获取博客信息
-        const blogInfo = await getBlogInfo()
-        
-        // 验证博客信息
-        if (!blogInfo.postsPtr || blogInfo.postsPtr.length !== 34) {
-            throw new Error(`Invalid postsPtr: ${blogInfo.postsPtr}. 请检查 BLOG_INFO_PTR 配置是否正确`)
-        }
-        if (!blogInfo.tagsPtr || blogInfo.tagsPtr.length !== 34) {
-            throw new Error(`Invalid tagsPtr: ${blogInfo.tagsPtr}. 请检查 BLOG_INFO_PTR 配置是否正确`)
-        }
+// 初始化时检查是否有缓存
+const cachedPosts = localStorage.getItem('blog_cache_posts')
+const cachedTags = localStorage.getItem('blog_cache_tags')
+hasCachedData = !!(cachedPosts && cachedTags)
 
-        // 2. 获取所有文章指针
-        const postPtrs = await getAllPostPtrs(blogInfo.postsPtr)
+// 监听错误状态
+watch(error, (err) => {
+  if (err && !hasCachedData) {
+    // 无缓存且加载失败，路由到错误页面
+    console.error('[Home] Load failed, redirecting to error page:', err)
+    router.replace('/error/home/load-failed')
+  }
+})
 
-        // 3. 批量获取所有文章详情
-        const postDetails = await batchGetPosts(postPtrs)
-
-        // 4. 过滤失败的文章，添加图片 URL
-        posts.value = postDetails
-            .filter(post => post !== null)
-            .map(post => ({
-                ...post,
-                id: post.ptr,
-                cover: getImageUrl(post.cover),
-                to: `/blogs/${post.ptr}`
-            }))
-
-        // 5. 批量获取标签列表及文章数量（优化：单次批量请求）
-        const tagsWithCount = await batchGetTagsWithCount(blogInfo.tagsPtr)
-
-        tags.value = tagsWithCount
-    } catch (err) {
-        console.error('Failed to load blog data:', err)
-        // 路由到错误页面
-        router.replace('/error/home/load-failed')
-    } finally {
-        loading.value = false
-        tagsLoading.value = false
-    }
+// 格式化时间显示
+function formatTime(date) {
+  if (!date) return '-'
+  const now = new Date()
+  const diff = now - date
+  const minutes = Math.floor(diff / 60000)
+  
+  if (minutes < 1) return '刚刚'
+  if (minutes < 60) return `${minutes}分钟前`
+  const hours = Math.floor(minutes / 60)
+  if (hours < 24) return `${hours}小时前`
+  return date.toLocaleDateString('zh-CN')
 }
 
 const addOrDelTag = (name) => {
@@ -134,10 +145,6 @@ const filteredPosts = computed(() => {
         return matchesText && matchesTag
     })
 })
-
-onMounted(() => {
-    loadData()
-})
 </script>
 
 <style lang="scss" scoped>
@@ -163,6 +170,80 @@ onMounted(() => {
     width: 90%;
     max-width: 600px;
     margin-bottom: 20px;
+}
+
+/* --- 刷新指示器 --- */
+.refresh-indicator {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 90%;
+    max-width: 600px;
+    margin-bottom: 16px;
+    padding: 8px 12px;
+    background-color: var(--bg-secondary-color);
+    border-radius: 8px;
+    border: 1px solid var(--border-light-color);
+}
+
+.refresh-indicator__status {
+    font-size: 0.85rem;
+    color: var(--meta-color);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.refresh-indicator__status--refreshing {
+    color: var(--primary-color);
+}
+
+.refresh-indicator__spinner {
+    width: 12px;
+    height: 12px;
+    border: 2px solid var(--border-light-color);
+    border-top-color: var(--primary-color);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+.refresh-indicator__btn {
+    margin-left: auto;
+    padding: 4px 8px;
+    background: transparent;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+
+.refresh-indicator__btn:hover:not(:disabled) {
+    background-color: var(--hover-bg-color);
+    border-color: var(--primary-color);
+}
+
+.refresh-indicator__btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.refresh-indicator__icon {
+    font-size: 1rem;
+    line-height: 1;
+    color: var(--text-color);
+}
+
+.refresh-indicator__btn:hover:not(:disabled) .refresh-indicator__icon {
+    color: var(--primary-color);
+    transform: rotate(180deg);
+    transition: transform 0.3s ease;
 }
 
 input {
