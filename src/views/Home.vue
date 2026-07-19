@@ -1,59 +1,24 @@
 <template>
-    <div class="main-layout">
-        <!-- 左侧：搜索 + 博客卡片 -->
+    <!-- 加载状态 -->
+    <LoadingSpinner v-if="loading" message="加载中..." />
+
+    <div v-else class="main-layout">
         <div class="content-column">
-            <!-- 加载状态 -->
-            <LoadingSpinner v-if="loading" message="加载中..." />
+            <!-- 左侧：搜索 + 博客卡片 -->
+            <div class="search-container">
+                <input type="text" v-model="searchText" placeholder="搜索标题或摘要..." />
+            </div>
+            <transition-group name="blog-list" tag="div" class="posts-grid">
+                <BlogCard v-for="post in filteredPosts" :key="post.ptr" v-bind="post" class="blog-card" />
+            </transition-group>
 
-            <!-- 正常内容 -->
-            <template v-else>
-                <!-- 刷新状态指示器 -->
-                <div class="refresh-indicator">
-                    <span v-if="refreshing" class="refresh-indicator__status refresh-indicator__status--refreshing">
-                        <span class="refresh-indicator__spinner"></span>
-                        更新中...
-                    </span>
-                    <span v-else class="refresh-indicator__status">
-                        已更新：{{ lastUpdated ? formatTime(lastUpdated) : '-' }}
-                    </span>
-                    <button 
-                        class="refresh-indicator__btn" 
-                        @click="refresh"
-                        :disabled="refreshing"
-                        title="手动刷新"
-                    >
-                        <span class="refresh-indicator__icon">↻</span>
-                    </button>
-                </div>
-
-                <div class="search-container">
-                    <input type="text" v-model="searchText" placeholder="搜索标题或摘要..." />
-                </div>
-                <transition-group name="blog-list" tag="div" class="posts-grid">
-                    <BlogCard
-                        v-for="post in filteredPosts"
-                        :key="post.ptr"
-                        v-bind="post"
-                        class="blog-card"
-                    />
-                </transition-group>
-            </template>
         </div>
 
         <!-- 右侧：标签栏 -->
         <div class="sidebar-column">
-            <!-- 标签加载状态 -->
-            <LoadingSpinner v-if="tagsLoading" message="加载标签..." />
-
-            <div v-else class="tags-container">
-                <TagCard
-                    v-for="tag in tags"
-                    :key="tag.ptr"
-                    :name="tag.name"
-                    :count="tag.count"
-                    @click="addOrDelTag(tag.name)"
-                    :class="{ 'tag-card--selected': searchTag.includes(tag.name) }"
-                />
+            <div class="tags-container">
+                <TagCard v-for="tag in tags" :key="tag.ptr" :name="tag.name" :count="tag.count"
+                    @click="addOrDelTag(tag.name)" :class="{ 'tag-card--selected': searchTag.includes(tag.name) }" />
             </div>
         </div>
     </div>
@@ -63,59 +28,39 @@
 import BlogCard from '@/components/BlogCard.vue'
 import TagCard from '@/components/TagCard.vue'
 import LoadingSpinner from '@/components/LoadingSpinner.vue'
-import { ref, computed, watch } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { useBlogCache } from '@/composables/useBlogCache'
-
-defineOptions({
-  name: '首页'
-})
+import { getCards, refreshCards } from '@/api/blogCards'
 
 const router = useRouter()
 const searchText = ref('')
 const searchTag = ref([])
 
-// 使用博客缓存策略（5 分钟自动刷新）
-const {
-  posts,
-  tags,
-  loading,
-  tagsLoading,
-  refreshing,
-  lastUpdated,
-  error,
-  refresh
-} = useBlogCache(5 * 60 * 1000)
+// 数据状态
+const posts = ref([])
+const tags = ref([])
+const loading = ref(false)
 
-// 监听错误，无缓存时路由到错误页面
-let hasCachedData = false
+async function initData() {
+    const data = getCards();
+    posts.value = data.posts;
+    tags.value = data.tags;
 
-// 初始化时检查是否有缓存
-const cachedPosts = localStorage.getItem('blog_cache_posts')
-const cachedTags = localStorage.getItem('blog_cache_tags')
-hasCachedData = !!(cachedPosts && cachedTags)
+    // 无缓存时显示 loading
+    if (!posts.value || posts.value.length === 0) {
+        loading.value = true;
+    }
 
-// 监听错误状态
-watch(error, (err) => {
-  if (err && !hasCachedData) {
-    // 无缓存且加载失败，路由到错误页面
-    console.error('[Home] Load failed, redirecting to error page:', err)
-    router.replace('/error/home/load-failed')
-  }
-})
-
-// 格式化时间显示
-function formatTime(date) {
-  if (!date) return '-'
-  const now = new Date()
-  const diff = now - date
-  const minutes = Math.floor(diff / 60000)
-  
-  if (minutes < 1) return '刚刚'
-  if (minutes < 60) return `${minutes}分钟前`
-  const hours = Math.floor(minutes / 60)
-  if (hours < 24) return `${hours}小时前`
-  return date.toLocaleDateString('zh-CN')
+    try {
+        const newData = await refreshCards();
+        posts.value = newData.posts || [];
+        tags.value = newData.tags || [];
+    } catch (error) {
+        console.error('加载数据失败:', error);
+        router.push('/error/home/load-failed');
+    } finally {
+        loading.value = false;
+    }
 }
 
 const addOrDelTag = (name) => {
@@ -144,6 +89,11 @@ const filteredPosts = computed(() => {
 
         return matchesText && matchesTag
     })
+})
+
+// 组件挂载时初始化
+onMounted(() => {
+    initData();
 })
 </script>
 
@@ -192,23 +142,6 @@ const filteredPosts = computed(() => {
     display: flex;
     align-items: center;
     gap: 6px;
-}
-
-.refresh-indicator__status--refreshing {
-    color: var(--primary-color);
-}
-
-.refresh-indicator__spinner {
-    width: 12px;
-    height: 12px;
-    border: 2px solid var(--border-light-color);
-    border-top-color: var(--primary-color);
-    border-radius: 50%;
-    animation: spin 0.8s linear infinite;
-}
-
-@keyframes spin {
-    to { transform: rotate(360deg); }
 }
 
 .refresh-indicator__btn {

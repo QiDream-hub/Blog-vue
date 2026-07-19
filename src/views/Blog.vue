@@ -13,7 +13,7 @@ import BlogPostView from '@/components/BlogPostView.vue'
 import LoadingSpinner from '@/components/LoadingSpinner.vue'
 import { ref, watch, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { getPostDetail } from '@/api/lmjweb'
+import { getPostDetail } from '@/api/blog'
 import { getArticleUrl, getImageUrl } from '@/config/blog'
 
 const route = useRoute()
