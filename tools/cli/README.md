@@ -33,6 +33,18 @@ npm run pub register article --file "./post.md" --title "标题"
 npm run pub link cover --article "01art..." --image "01img..."
 npm run pub link tags --article "01art..." --names "技术，随笔"
 npm run pub link blog --article "01art..."
+
+# 删除内容
+npm run pub delete article --ptr "01art..."
+npm run pub delete image --ptr "01img..."
+npm run pub delete tag --name "技术"
+
+# 更新内容
+npm run pub update article-title --ptr "01art..." --title "新标题"
+npm run pub update article-cover --ptr "01art..." --image "01img..."
+npm run pub update article-tags --ptr "01art..." --tags "新，标签"
+npm run pub update add-tag --ptr "01art..." --name "新技术"
+npm run pub update remove-tag --ptr "01art..." --name "旧标签"
 ```
 
 ## 项目结构

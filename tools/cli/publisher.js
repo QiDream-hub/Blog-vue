@@ -463,18 +463,488 @@ export class Publisher {
 
   /**
    * 删除已注册的文件
-   * 
+   *
    * @param {string} ptr 文件指针
    * @param {'image' | 'article'} type 文件类型
    */
   deleteFile(ptr, type) {
-    const filePath = type === 'image' 
-      ? this.#getImagePath(ptr) 
+    const filePath = type === 'image'
+      ? this.#getImagePath(ptr)
       : this.#getArticlePath(ptr)
-    
+
     if (this.#fileExists(filePath)) {
       fs.unlinkSync(filePath)
     }
+  }
+
+  // ==================== 删除操作 ====================
+
+  /**
+   * 删除文章（包括元数据、文件、关联关系）
+   * 
+   * @param {string} articlePtr 文章指针
+   * @param {boolean} [deleteFile=true] 是否同时删除文件
+   * @returns {Promise<{ success: boolean, removedFromBlog: boolean, tagsUpdated: string[] }>}
+   */
+  async deleteArticle(articlePtr, deleteFile = true) {
+    const article = await this.#getObject(articlePtr)
+    const tagsUpdated = []
+
+    // 1. 从博客文章集合中移除
+    let removedFromBlog = false
+    try {
+      const blogInfo = await this.#getObject(this.config.blogInfoPtr)
+      const postsPtr = blogInfo.members.find(m => m.name === 'posts')?.value
+      if (postsPtr) {
+        const postsSet = await this.#getSet(postsPtr)
+        if ((postsSet.elements || []).some(e => e.value === articlePtr)) {
+          await this.#removeElement(postsPtr, articlePtr)
+          removedFromBlog = true
+        }
+      }
+    } catch (e) {
+      // 博客集合不存在，跳过
+    }
+
+    // 2. 从所有标签的文章集合中移除
+    const tagsPtr = article.members.find(m => m.name === 'tags')?.value
+    if (tagsPtr) {
+      const tagsSet = await this.#getSet(tagsPtr)
+      const tagNames = (tagsSet.elements || []).map(e => e.value).filter(Boolean)
+
+      for (const tagName of tagNames) {
+        const tagResult = await this.#findTagByName(tagName)
+        if (tagResult) {
+          const tagPostsSet = await this.#getSet(tagResult.postsPtr)
+          if ((tagPostsSet.elements || []).some(e => e.value === articlePtr)) {
+            await this.#removeElement(tagResult.postsPtr, articlePtr)
+            tagsUpdated.push(tagName)
+          }
+        }
+      }
+    }
+
+    // 3. 删除文章标签集合
+    if (tagsPtr) {
+      await this.#deleteSet(tagsPtr)
+    }
+
+    // 4. 删除文章对象
+    await this.#deleteObject(articlePtr)
+
+    // 5. 删除文件
+    if (deleteFile) {
+      this.deleteFile(articlePtr, 'article')
+    }
+
+    return {
+      success: true,
+      removedFromBlog,
+      tagsUpdated
+    }
+  }
+
+  /**
+   * 删除图片（包括元数据、文件、关联关系）
+   * 
+   * @param {string} imagePtr 图片指针
+   * @param {boolean} [deleteFile=true] 是否同时删除文件
+   * @returns {Promise<{ success: boolean, removedFromImages: boolean, unlinkedFromArticles: string[] }>}
+   */
+  async deleteImage(imagePtr, deleteFile = true) {
+    const unlinkedFromArticles = []
+
+    // 1. 从全局图片集合中移除
+    let removedFromImages = false
+    try {
+      const blogInfo = await this.#getObject(this.config.blogInfoPtr)
+      const imagesPtr = blogInfo.members.find(m => m.name === 'images')?.value
+      if (imagesPtr) {
+        const imagesSet = await this.#getSet(imagesPtr)
+        if ((imagesSet.elements || []).some(e => e.value === imagePtr)) {
+          await this.#removeElement(imagesPtr, imagePtr)
+          removedFromImages = true
+        }
+      }
+    } catch (e) {
+      // 图片集合不存在，跳过
+    }
+
+    // 2. 查找并解除所有使用该图片作为封面的文章
+    const allArticles = await this.getAllArticles()
+    for (const articlePtr of allArticles) {
+      const article = await this.#getObject(articlePtr)
+      const coverPtr = article.members.find(m => m.name === 'cover')?.value
+      if (coverPtr === imagePtr) {
+        await this.#setMember(articlePtr, 'cover', '', 'raw')
+        unlinkedFromArticles.push(articlePtr)
+      }
+    }
+
+    // 3. 删除图片对象
+    await this.#deleteObject(imagePtr)
+
+    // 4. 删除文件
+    if (deleteFile) {
+      this.deleteFile(imagePtr, 'image')
+    }
+
+    return {
+      success: true,
+      removedFromImages,
+      unlinkedFromArticles
+    }
+  }
+
+  /**
+   * 删除标签
+   * 
+   * @param {string} tagName 标签名称
+   * @returns {Promise<{ success: boolean, removedFromBlog: boolean, articlesUpdated: number }>}
+   */
+  async deleteTag(tagName) {
+    const tagResult = await this.#findTagByName(tagName)
+    if (!tagResult) {
+      throw new Error(`标签不存在：${tagName}`)
+    }
+
+    const { ptr: tagPtr, postsPtr } = tagResult
+    let articlesUpdated = 0
+    let removedFromBlog = false
+
+    // 1. 从博客标签集合中移除
+    try {
+      const blogInfo = await this.#getObject(this.config.blogInfoPtr)
+      const tagsPtr = blogInfo.members.find(m => m.name === 'tags')?.value
+      if (tagsPtr) {
+        const tagsSet = await this.#getSet(tagsPtr)
+        if ((tagsSet.elements || []).some(e => e.value === tagPtr)) {
+          await this.#removeElement(tagsPtr, tagPtr)
+          removedFromBlog = true
+        }
+      }
+    } catch (e) {
+      // 博客集合不存在，跳过
+    }
+
+    // 2. 从所有使用该标签的文章中移除
+    const tagPostsSet = await this.#getSet(postsPtr)
+    const articlePtrs = (tagPostsSet.elements || []).map(e => e.value).filter(Boolean)
+
+    for (const articlePtr of articlePtrs) {
+      const article = await this.#getObject(articlePtr)
+      const articleTagsPtr = article.members.find(m => m.name === 'tags')?.value
+      if (articleTagsPtr) {
+        const articleTagsSet = await this.#getSet(articleTagsPtr)
+        if ((articleTagsSet.elements || []).some(e => e.value === tagName)) {
+          await this.#removeElement(articleTagsPtr, tagName)
+          articlesUpdated++
+        }
+      }
+    }
+
+    // 3. 删除标签文章集合
+    await this.#deleteSet(postsPtr)
+
+    // 4. 删除标签对象
+    await this.#deleteObject(tagPtr)
+
+    return {
+      success: true,
+      removedFromBlog,
+      articlesUpdated
+    }
+  }
+
+  // ==================== 更新操作 ====================
+
+  /**
+   * 更新文章标题
+   * 
+   * @param {string} articlePtr 文章指针
+   * @param {string} newTitle 新标题
+   * @returns {Promise<{ success: boolean, oldTitle: string, newTitle: string }>}
+   */
+  async updateArticleTitle(articlePtr, newTitle) {
+    const article = await this.#getObject(articlePtr)
+    const oldTitle = article.members.find(m => m.name === 'title')?.value
+
+    if (!oldTitle) {
+      throw new Error('文章不存在或无标题')
+    }
+
+    await this.#setMember(articlePtr, 'title', newTitle, 'raw')
+
+    return {
+      success: true,
+      oldTitle,
+      newTitle
+    }
+  }
+
+  /**
+   * 更新文章封面
+   * 
+   * @param {string} articlePtr 文章指针
+   * @param {string} newImagePtr 新封面图片指针
+   * @returns {Promise<{ success: boolean, oldCover: string | null, newCover: string }>}
+   */
+  async updateArticleCover(articlePtr, newImagePtr) {
+    const article = await this.#getObject(articlePtr)
+    const oldCover = article.members.find(m => m.name === 'cover')?.value || null
+
+    await this.#setMember(articlePtr, 'cover', newImagePtr, 'ref')
+
+    return {
+      success: true,
+      oldCover,
+      newCover: newImagePtr
+    }
+  }
+
+  /**
+   * 移除文章封面
+   * 
+   * @param {string} articlePtr 文章指针
+   * @returns {Promise<{ success: boolean, removedCover: string | null }>}
+   */
+  async removeArticleCover(articlePtr) {
+    const article = await this.#getObject(articlePtr)
+    const oldCover = article.members.find(m => m.name === 'cover')?.value || null
+
+    if (oldCover) {
+      await this.#deleteMember(articlePtr, 'cover')
+    }
+
+    return {
+      success: true,
+      removedCover: oldCover
+    }
+  }
+
+  /**
+   * 更新文章标签（替换所有标签）
+   * 
+   * @param {string} articlePtr 文章指针
+   * @param {string[]} newTagNames 新标签名称列表
+   * @returns {Promise<{ success: boolean, removedTags: string[], addedTags: string[] }>}
+   */
+  async updateArticleTags(articlePtr, newTagNames) {
+    const article = await this.#getObject(articlePtr)
+    const articleTagsPtr = article.members.find(m => m.name === 'tags')?.value
+
+    if (!articleTagsPtr) {
+      throw new Error('文章标签集合不存在')
+    }
+
+    // 获取当前标签
+    const currentTagsSet = await this.#getSet(articleTagsPtr)
+    const currentTags = (currentTagsSet.elements || []).map(e => e.value).filter(Boolean)
+
+    // 计算差异
+    const removedTags = currentTags.filter(t => !newTagNames.includes(t))
+    const addedTags = newTagNames.filter(t => !currentTags.includes(t))
+
+    // 移除旧标签
+    for (const tagName of removedTags) {
+      await this.#removeElement(articleTagsPtr, tagName)
+
+      // 从标签的文章集合中移除
+      const tagResult = await this.#findTagByName(tagName)
+      if (tagResult) {
+        const tagPostsSet = await this.#getSet(tagResult.postsPtr)
+        if ((tagPostsSet.elements || []).some(e => e.value === articlePtr)) {
+          await this.#removeElement(tagResult.postsPtr, articlePtr)
+        }
+      }
+    }
+
+    // 添加新标签
+    for (const tagName of addedTags) {
+      await this.#addElement(articleTagsPtr, tagName)
+
+      // 添加到标签的文章集合
+      const { ptr: tagPtr, postsPtr } = await this.#findOrCreateTag(tagName)
+      await this.#addElement(postsPtr, articlePtr)
+    }
+
+    return {
+      success: true,
+      removedTags,
+      addedTags
+    }
+  }
+
+  /**
+   * 添加单个标签到文章
+   * 
+   * @param {string} articlePtr 文章指针
+   * @param {string} tagName 标签名称
+   * @returns {Promise<{ ptr: string, created: boolean }>}
+   */
+  async addTagToArticle(articlePtr, tagName) {
+    return await this.linkTag(articlePtr, tagName)
+  }
+
+  /**
+   * 从文章移除单个标签
+   * 
+   * @param {string} articlePtr 文章指针
+   * @param {string} tagName 标签名称
+   * @returns {Promise<{ success: boolean, tagName: string }>}
+   */
+  async removeTagFromArticle(articlePtr, tagName) {
+    const article = await this.#getObject(articlePtr)
+    const articleTagsPtr = article.members.find(m => m.name === 'tags')?.value
+
+    if (!articleTagsPtr) {
+      throw new Error('文章标签集合不存在')
+    }
+
+    const articleTagsSet = await this.#getSet(articleTagsPtr)
+    const hasTag = (articleTagsSet.elements || []).some(e => e.value === tagName)
+
+    if (!hasTag) {
+      throw new Error(`文章没有此标签：${tagName}`)
+    }
+
+    // 从文章标签集合移除
+    await this.#removeElement(articleTagsPtr, tagName)
+
+    // 从标签的文章集合移除
+    const tagResult = await this.#findTagByName(tagName)
+    if (tagResult) {
+      const tagPostsSet = await this.#getSet(tagResult.postsPtr)
+      if ((tagPostsSet.elements || []).some(e => e.value === articlePtr)) {
+        await this.#removeElement(tagResult.postsPtr, articlePtr)
+      }
+    }
+
+    return {
+      success: true,
+      tagName
+    }
+  }
+
+  /**
+   * 更新文章文件内容
+   * 
+   * @param {string} articlePtr 文章指针
+   * @param {string} newFilePath 新文件路径
+   * @returns {Promise<{ success: boolean, newPath: string }>}
+   */
+  async updateArticleFile(articlePtr, newFilePath) {
+    if (!this.#fileExists(newFilePath)) {
+      throw new Error(`文件不存在：${newFilePath}`)
+    }
+
+    // 复制新文件到目标位置（覆盖旧文件）
+    const destPath = this.#getArticlePath(articlePtr)
+    this.#ensureDir(path.dirname(destPath))
+    fs.copyFileSync(newFilePath, destPath)
+
+    return {
+      success: true,
+      newPath: destPath
+    }
+  }
+
+  /**
+   * 更新图片文件名元数据
+   * 
+   * @param {string} imagePtr 图片指针
+   * @param {string} newFilename 新文件名
+   * @returns {Promise<{ success: boolean, oldFilename: string, newFilename: string }>}
+   */
+  async updateImageFilename(imagePtr, newFilename) {
+    const image = await this.#getObject(imagePtr)
+    const oldFilename = image.members.find(m => m.name === 'filename')?.value
+
+    if (!oldFilename) {
+      throw new Error('图片不存在或无文件名')
+    }
+
+    await this.#setMember(imagePtr, 'filename', newFilename, 'raw')
+
+    return {
+      success: true,
+      oldFilename,
+      newFilename
+    }
+  }
+
+  // ==================== 辅助方法 ====================
+
+  /**
+   * 查找标签
+   * @param {string} name 标签名称
+   * @returns {Promise<{ ptr: string, postsPtr: string } | null>}
+   * @private
+   */
+  async #findTagByName(name) {
+    const blogInfo = await this.#getObject(this.config.blogInfoPtr)
+    const tagsPtr = blogInfo.members.find(m => m.name === 'tags')?.value
+    if (!tagsPtr) return null
+
+    const tagsSet = await this.#getSet(tagsPtr)
+    const elements = (tagsSet.elements || []).filter(e => e.value && e.value.trim())
+
+    for (const elem of elements) {
+      const tagObj = await this.#getObject(elem.value)
+      const nameMember = tagObj.members.find(m => m.name === 'name')
+      if (nameMember?.value === name) {
+        const tagPostsPtr = tagObj.members.find(m => m.name === 'posts')?.value
+        return { ptr: elem.value, postsPtr: tagPostsPtr }
+      }
+    }
+
+    return null
+  }
+
+  /**
+   * 从集合移除元素
+   * @param {string} setPtr 集合指针
+   * @param {string} value 元素值
+   * @private
+   */
+  async #removeElement(setPtr, value) {
+    const res = await fetch(`${this.apiBase}/set/${setPtr}/elements`, {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ value })
+    })
+    return res.json()
+  }
+
+  /**
+   * 删除集合
+   * @param {string} ptr 集合指针
+   * @private
+   */
+  async #deleteSet(ptr) {
+    const res = await fetch(`${this.apiBase}/set/${ptr}`, { method: 'DELETE' })
+    return res.json()
+  }
+
+  /**
+   * 删除对象
+   * @param {string} ptr 对象指针
+   * @private
+   */
+  async #deleteObject(ptr) {
+    const res = await fetch(`${this.apiBase}/obj/${ptr}`, { method: 'DELETE' })
+    return res.json()
+  }
+
+  /**
+   * 删除对象成员
+   * @param {string} ptr 对象指针
+   * @param {string} member 成员名
+   * @private
+   */
+  async #deleteMember(ptr, member) {
+    const res = await fetch(`${this.apiBase}/obj/${ptr}/${member}`, { method: 'DELETE' })
+    return res.json()
   }
 
   /**

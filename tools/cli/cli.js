@@ -422,5 +422,253 @@ infoCmd
     }
   })
 
+// delete 命令组
+const deleteCmd = program
+  .command('delete')
+  .description('删除内容')
+
+// delete article
+deleteCmd
+  .command('article')
+  .description('删除文章')
+  .requiredOption('--ptr <ptr>', '文章指针')
+  .option('--keep-file', '保留文件（不删除物理文件）')
+  .action(async (options, cmd) => {
+    const publisher = createPublisher(cmd.parent.parent.opts().config)
+
+    try {
+      const result = await publisher.deleteArticle(options.ptr, !options.keepFile)
+      console.log('✓ 文章删除完成')
+      console.log(`  文章：${options.ptr}`)
+      console.log(`  从博客移除：${result.removedFromBlog ? '是' : '否'}`)
+      console.log(`  更新标签：${result.tagsUpdated.length > 0 ? result.tagsUpdated.join(', ') : '无'}`)
+      console.log(`  文件处理：${options.keepFile ? '保留' : '已删除'}`)
+    } catch (err) {
+      console.error('✗ 删除失败:', err.message)
+      process.exit(1)
+    }
+  })
+
+// delete image
+deleteCmd
+  .command('image')
+  .description('删除图片')
+  .requiredOption('--ptr <ptr>', '图片指针')
+  .option('--keep-file', '保留文件（不删除物理文件）')
+  .action(async (options, cmd) => {
+    const publisher = createPublisher(cmd.parent.parent.opts().config)
+
+    try {
+      const result = await publisher.deleteImage(options.ptr, !options.keepFile)
+      console.log('✓ 图片删除完成')
+      console.log(`  图片：${options.ptr}`)
+      console.log(`  从全局集合移除：${result.removedFromImages ? '是' : '否'}`)
+      console.log(`  解除封面关联：${result.unlinkedFromArticles.length > 0 ? result.unlinkedFromArticles.join(', ') : '无'}`)
+      console.log(`  文件处理：${options.keepFile ? '保留' : '已删除'}`)
+    } catch (err) {
+      console.error('✗ 删除失败:', err.message)
+      process.exit(1)
+    }
+  })
+
+// delete tag
+deleteCmd
+  .command('tag')
+  .description('删除标签')
+  .requiredOption('--name <string>', '标签名称')
+  .action(async (options, cmd) => {
+    const publisher = createPublisher(cmd.parent.parent.opts().config)
+
+    try {
+      const result = await publisher.deleteTag(options.name)
+      console.log('✓ 标签删除完成')
+      console.log(`  标签：${options.name}`)
+      console.log(`  从博客移除：${result.removedFromBlog ? '是' : '否'}`)
+      console.log(`  更新文章数：${result.articlesUpdated}`)
+    } catch (err) {
+      console.error('✗ 删除失败:', err.message)
+      process.exit(1)
+    }
+  })
+
+// update 命令组
+const updateCmd = program
+  .command('update')
+  .description('更新内容')
+
+// update article-title
+updateCmd
+  .command('article-title')
+  .description('更新文章标题')
+  .requiredOption('--ptr <ptr>', '文章指针')
+  .requiredOption('--title <string>', '新标题')
+  .action(async (options, cmd) => {
+    const publisher = createPublisher(cmd.parent.parent.opts().config)
+
+    try {
+      const result = await publisher.updateArticleTitle(options.ptr, options.title)
+      console.log('✓ 标题更新完成')
+      console.log(`  文章：${options.ptr}`)
+      console.log(`  原标题：${result.oldTitle}`)
+      console.log(`  新标题：${result.newTitle}`)
+    } catch (err) {
+      console.error('✗ 更新失败:', err.message)
+      process.exit(1)
+    }
+  })
+
+// update article-cover
+updateCmd
+  .command('article-cover')
+  .description('更新文章封面')
+  .requiredOption('--ptr <ptr>', '文章指针')
+  .requiredOption('--image <ptr>', '新封面图片指针')
+  .action(async (options, cmd) => {
+    const publisher = createPublisher(cmd.parent.parent.opts().config)
+
+    try {
+      const result = await publisher.updateArticleCover(options.ptr, options.image)
+      console.log('✓ 封面更新完成')
+      console.log(`  文章：${options.ptr}`)
+      console.log(`  原封面：${result.oldCover || '无'}`)
+      console.log(`  新封面：${result.newCover}`)
+    } catch (err) {
+      console.error('✗ 更新失败:', err.message)
+      process.exit(1)
+    }
+  })
+
+// remove article-cover
+updateCmd
+  .command('remove-cover')
+  .description('移除文章封面')
+  .requiredOption('--ptr <ptr>', '文章指针')
+  .action(async (options, cmd) => {
+    const publisher = createPublisher(cmd.parent.parent.opts().config)
+
+    try {
+      const result = await publisher.removeArticleCover(options.ptr)
+      console.log('✓ 封面移除完成')
+      console.log(`  文章：${options.ptr}`)
+      console.log(`  移除封面：${result.removedCover || '无'}`)
+    } catch (err) {
+      console.error('✗ 移除失败:', err.message)
+      process.exit(1)
+    }
+  })
+
+// update article-tags
+updateCmd
+  .command('article-tags')
+  .description('更新文章标签（替换所有标签）')
+  .requiredOption('--ptr <ptr>', '文章指针')
+  .requiredOption('--tags <string>', '新标签列表（逗号分隔）')
+  .action(async (options, cmd) => {
+    const publisher = createPublisher(cmd.parent.parent.opts().config)
+
+    try {
+      const tagNames = options.tags.split(',').map(t => t.trim()).filter(Boolean)
+      const result = await publisher.updateArticleTags(options.ptr, tagNames)
+      
+      console.log('✓ 标签更新完成')
+      console.log(`  文章：${options.ptr}`)
+      if (result.removedTags.length > 0) {
+        console.log(`  移除标签：${result.removedTags.join(', ')}`)
+      }
+      if (result.addedTags.length > 0) {
+        console.log(`  添加标签：${result.addedTags.join(', ')}`)
+      }
+      if (result.removedTags.length === 0 && result.addedTags.length === 0) {
+        console.log('  标签无变化')
+      }
+    } catch (err) {
+      console.error('✗ 更新失败:', err.message)
+      process.exit(1)
+    }
+  })
+
+// update add-tag
+updateCmd
+  .command('add-tag')
+  .description('添加单个标签到文章')
+  .requiredOption('--ptr <ptr>', '文章指针')
+  .requiredOption('--name <string>', '标签名称')
+  .action(async (options, cmd) => {
+    const publisher = createPublisher(cmd.parent.parent.opts().config)
+
+    try {
+      const result = await publisher.addTagToArticle(options.ptr, options.name)
+      console.log('✓ 标签添加完成')
+      console.log(`  文章：${options.ptr}`)
+      console.log(`  标签：${options.name}`)
+      console.log(`  ${result.created ? '新建标签' : '使用现有标签'}`)
+    } catch (err) {
+      console.error('✗ 添加失败:', err.message)
+      process.exit(1)
+    }
+  })
+
+// update remove-tag
+updateCmd
+  .command('remove-tag')
+  .description('从文章移除单个标签')
+  .requiredOption('--ptr <ptr>', '文章指针')
+  .requiredOption('--name <string>', '标签名称')
+  .action(async (options, cmd) => {
+    const publisher = createPublisher(cmd.parent.parent.opts().config)
+
+    try {
+      const result = await publisher.removeTagFromArticle(options.ptr, options.name)
+      console.log('✓ 标签移除完成')
+      console.log(`  文章：${options.ptr}`)
+      console.log(`  移除标签：${result.tagName}`)
+    } catch (err) {
+      console.error('✗ 移除失败:', err.message)
+      process.exit(1)
+    }
+  })
+
+// update article-file
+updateCmd
+  .command('article-file')
+  .description('更新文章文件内容')
+  .requiredOption('--ptr <ptr>', '文章指针')
+  .requiredOption('--file <path>', '新文件路径')
+  .action(async (options, cmd) => {
+    const publisher = createPublisher(cmd.parent.parent.opts().config)
+
+    try {
+      const filePath = path.resolve(process.cwd(), options.file)
+      const result = await publisher.updateArticleFile(options.ptr, filePath)
+      console.log('✓ 文件内容更新完成')
+      console.log(`  文章：${options.ptr}`)
+      console.log(`  新路径：${result.newPath}`)
+    } catch (err) {
+      console.error('✗ 更新失败:', err.message)
+      process.exit(1)
+    }
+  })
+
+// update image-filename
+updateCmd
+  .command('image-filename')
+  .description('更新图片文件名元数据')
+  .requiredOption('--ptr <ptr>', '图片指针')
+  .requiredOption('--filename <string>', '新文件名')
+  .action(async (options, cmd) => {
+    const publisher = createPublisher(cmd.parent.parent.opts().config)
+
+    try {
+      const result = await publisher.updateImageFilename(options.ptr, options.filename)
+      console.log('✓ 文件名更新完成')
+      console.log(`  图片：${options.ptr}`)
+      console.log(`  原文件名：${result.oldFilename}`)
+      console.log(`  新文件名：${result.newFilename}`)
+    } catch (err) {
+      console.error('✗ 更新失败:', err.message)
+      process.exit(1)
+    }
+  })
+
 // 解析命令行
 program.parse()

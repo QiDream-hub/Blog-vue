@@ -96,6 +96,54 @@ npm run pub file copy --ptr "01art..." --dest "/backup/" --type article
 npm run pub info article --ptr "01art..."
 npm run pub info image --ptr "01img..."
 npm run pub info blog
+npm run pub info list --type articles
+```
+
+### 删除操作
+
+```bash
+# 删除文章（同时删除文件）
+npm run pub delete article --ptr "01art..."
+
+# 删除文章（保留文件）
+npm run pub delete article --ptr "01art..." --keep-file
+
+# 删除图片
+npm run pub delete image --ptr "01img..."
+
+# 删除图片（保留文件）
+npm run pub delete image --ptr "01img..." --keep-file
+
+# 删除标签
+npm run pub delete tag --name "技术"
+```
+
+### 更新操作
+
+```bash
+# 更新文章标题
+npm run pub update article-title --ptr "01art..." --title "新标题"
+
+# 更新文章封面
+npm run pub update article-cover --ptr "01art..." --image "01img..."
+
+# 移除文章封面
+npm run pub update remove-cover --ptr "01art..."
+
+# 更新文章标签（替换所有）
+npm run pub update article-tags --ptr "01art..." --tags "技术，Vue，随笔"
+
+# 添加单个标签
+npm run pub update add-tag --ptr "01art..." --name "新技术"
+
+# 移除单个标签
+npm run pub update remove-tag --ptr "01art..." --name "旧标签"
+
+# 更新文章文件内容
+npm run pub update article-file --ptr "01art..." --file "./revised-article.md"
+
+# 更新图片文件名元数据
+npm run pub update image-filename --ptr "01img..." --filename "new-cover.jpg"
 ```
 
 ### 使用自定义配置
@@ -179,16 +227,62 @@ const imageInfo = await publisher.getImage(cover.ptr)
 
 // 获取博客信息
 const blogInfo = await publisher.getBlogInfo()
+
+// 获取所有文章
+const allArticles = await publisher.getAllArticles()
+
+// 获取所有图片
+const allImages = await publisher.getAllImages()
 ```
 
-### 文件操作
+### 删除操作
 
 ```javascript
-// 复制文件到其他目录
-const destPath = publisher.copyFile(article.ptr, '/backup/', 'article')
+// 删除文章（同时删除文件）
+const result = await publisher.deleteArticle(articlePtr)
+// { success: true, removedFromBlog: true, tagsUpdated: ['技术', '随笔'] }
 
-// 删除文件
-publisher.deleteFile(article.ptr, 'article')
+// 删除文章（保留文件）
+await publisher.deleteArticle(articlePtr, false)
+
+// 删除图片
+const imgResult = await publisher.deleteImage(imagePtr)
+// { success: true, removedFromImages: true, unlinkedFromArticles: ['01art...'] }
+
+// 删除标签
+const tagResult = await publisher.deleteTag('技术')
+// { success: true, removedFromBlog: true, articlesUpdated: 3 }
+```
+
+### 更新操作
+
+```javascript
+// 更新文章标题
+const titleResult = await publisher.updateArticleTitle(articlePtr, '新标题')
+// { success: true, oldTitle: '原标题', newTitle: '新标题' }
+
+// 更新文章封面
+const coverResult = await publisher.updateArticleCover(articlePtr, newImagePtr)
+// { success: true, oldCover: '01img...', newCover: '01new...' }
+
+// 移除文章封面
+await publisher.removeArticleCover(articlePtr)
+
+// 更新文章标签（替换所有）
+const tagsResult = await publisher.updateArticleTags(articlePtr, ['新标签 1', '新标签 2'])
+// { success: true, removedTags: ['旧标签'], addedTags: ['新标签 1', '新标签 2'] }
+
+// 添加单个标签
+await publisher.addTagToArticle(articlePtr, '新技术')
+
+// 移除单个标签
+await publisher.removeTagFromArticle(articlePtr, '旧标签')
+
+// 更新文章文件内容
+await publisher.updateArticleFile(articlePtr, './revised-article.md')
+
+// 更新图片文件名元数据
+await publisher.updateImageFilename(imagePtr, 'new-filename.jpg')
 ```
 
 ---
