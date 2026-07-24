@@ -271,6 +271,9 @@ export class Publisher {
     await this.#setMember(articlePtr, 'title', title, 'raw')
     await this.#setMember(articlePtr, 'tags', articleTagsPtr, 'ref')
 
+    // 将文章添加到博客 posts 集合
+    await this.linkToBlog(articlePtr)
+
     // 移动文件到 articlesDir/{articlePtr}
     const destPath = this.#moveFileToDest(filePath, this.config.articlesDir, articlePtr)
 

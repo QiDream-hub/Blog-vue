@@ -1,10 +1,10 @@
 /**
  * lmjweb API 服务封装
  *
- * 提供对 lmjweb 元数据服务的通用操作（只读）
+ * 提供对 lmjweb 元数据服务的通用操作（支持读写）
  */
 
-import { getConfig } from '@/config/blog'
+import { getConfig } from '../config/blog.js'
 
 /**
  * 获取 API 基础 URL
@@ -41,7 +41,16 @@ export async function healthCheck() {
   return response.json()
 }
 
-// ==================== 对象操作（只读） ====================
+// ==================== 对象操作 ====================
+
+/**
+ * 创建空对象
+ * @returns {Promise<{ptr: string}>}
+ */
+export async function createObject() {
+  const response = await fetch(`${getApiUrl()}/obj`, { method: 'POST' })
+  return response.json()
+}
 
 /**
  * 获取完整对象
@@ -77,6 +86,54 @@ export async function getObjectMember(ptr, member) {
 }
 
 /**
+ * 设置对象成员值
+ * @param {string} ptr - 对象指针
+ * @param {string} member - 成员名
+ * @param {string} value - 成员值
+ * @param {'raw' | 'ref'} type - 值类型
+ */
+export async function setObjectMember(ptr, member, value, type = 'raw') {
+  const response = await fetch(`${getApiUrl()}/obj/${ptr}/${member}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ value, type })
+  })
+  if (!response.ok) {
+    throw new Error(`设置成员失败：${response.statusText}`)
+  }
+  return response.json()
+}
+
+/**
+ * 删除对象成员
+ * @param {string} ptr - 对象指针
+ * @param {string} member - 成员名
+ */
+export async function deleteObjectMember(ptr, member) {
+  const response = await fetch(`${getApiUrl()}/obj/${ptr}/${member}`, {
+    method: 'DELETE'
+  })
+  if (!response.ok) {
+    throw new Error(`删除成员失败：${response.statusText}`)
+  }
+  return response.json()
+}
+
+/**
+ * 删除完整对象
+ * @param {string} ptr - 对象指针
+ */
+export async function deleteObject(ptr) {
+  const response = await fetch(`${getApiUrl()}/obj/${ptr}`, {
+    method: 'DELETE'
+  })
+  if (!response.ok) {
+    throw new Error(`删除对象失败：${response.statusText}`)
+  }
+  return response.json()
+}
+
+/**
  * 链式查询对象成员
  * @param {string} path - 查询路径（格式：ptr.member1.member2）
  * @returns {Promise<{path: string, value: string, type: string}>}
@@ -89,7 +146,16 @@ export async function queryObjectPath(path) {
   return response.json()
 }
 
-// ==================== 集合操作（只读） ====================
+// ==================== 集合操作 ====================
+
+/**
+ * 创建空集合
+ * @returns {Promise<{ptr: string}>}
+ */
+export async function createSet() {
+  const response = await fetch(`${getApiUrl()}/set`, { method: 'POST' })
+  return response.json()
+}
 
 /**
  * 获取完整集合
@@ -107,16 +173,76 @@ export async function getSet(ptr) {
   return response.json()
 }
 
+/**
+ * 添加集合元素
+ * @param {string} ptr - 集合指针
+ * @param {string} value - 元素值
+ */
+export async function addSetElement(ptr, value) {
+  const response = await fetch(`${getApiUrl()}/set/${ptr}/elements`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ value })
+  })
+  if (!response.ok) {
+    throw new Error(`添加元素失败：${response.statusText}`)
+  }
+  return response.json()
+}
+
+/**
+ * 删除集合元素
+ * @param {string} ptr - 集合指针
+ * @param {string} value - 元素值
+ */
+export async function removeSetElement(ptr, value) {
+  const response = await fetch(`${getApiUrl()}/set/${ptr}/elements`, {
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ value })
+  })
+  if (!response.ok) {
+    throw new Error(`删除元素失败：${response.statusText}`)
+  }
+  return response.json()
+}
+
+/**
+ * 删除完整集合
+ * @param {string} ptr - 集合指针
+ */
+export async function deleteSet(ptr) {
+  const response = await fetch(`${getApiUrl()}/set/${ptr}`, {
+    method: 'DELETE'
+  })
+  if (!response.ok) {
+    throw new Error(`删除集合失败：${response.statusText}`)
+  }
+  return response.json()
+}
+
 // ==================== 批量操作 ====================
 
 /**
- * 批量执行只读操作（GET /batch）
- *
- * 使用只读事务，仅允许 GET 操作，保证读取一致性。为了兼容性使用 POST 方法提交操作列表，在 nginx 中配置将 POST /batch 转发到 GET /batch
- * @param {Array<{method: 'GET', path: string}>} operations - 操作列表，仅允许 GET 操作
+ * 批量执行操作（支持读写）
+ * @param {Array<{method: string, path: string, body?: object}>} operations - 操作列表
  * @returns {Promise<{success: boolean, results: Array<{status: number, body: any}>}>}
  */
 export async function batchOperations(operations) {
+  const response = await fetch(`${getApiUrl()}/batch`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ operations })
+  })
+  return response.json()
+}
+
+/**
+ * 批量 GET 操作（只读查询）
+ * @param {Array<{method: string, path: string}>} operations - 操作列表（仅 GET）
+ * @returns {Promise<{success: boolean, results: Array<{status: number, body: any}>}>}
+ */
+export async function batchGet(operations) {
   const response = await fetch(`${getApiUrl()}/batch`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
