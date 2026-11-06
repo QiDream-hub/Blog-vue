@@ -31,4 +31,4 @@ ESCAPED_PTR=$(printf '%s' "$BLOG_INFO_PTR" | sed 's/[\\&|]/\\&/g')
 
 sed -i "/<script id=\"blog-config\"/,/<\/script>/ s|\(\"BLOG_INFO_PTR\"[[:space:]]*:[[:space:]]*\"\)[^\"]*\"|\1${ESCAPED_PTR}\"|" "$INDEX_FILE"
 
-exec exec /docker-entrypoint.sh "$@"
+exec /docker-entrypoint.sh "$@"

@@ -27,7 +27,7 @@ server {
 
     location /api/ {
         limit_except GET { deny all; }
-        proxy_pass http://${META_SERVICE_URL};
+        proxy_pass http://${META_SERVICE_URL}/;
         proxy_set_header Host $host;
         add_header Cache-Control "no-cache, no-store, must-revalidate";
     }

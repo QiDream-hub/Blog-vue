@@ -17,7 +17,8 @@ FROM nginx:alpine
 COPY --from=builder /app/dist /blog/dist
 COPY blog.conf.template /etc/nginx/templates/
 COPY entrypoint.sh /blog/entrypoint.sh
-RUN chmod +x /blog/entrypoint.sh
+RUN chmod +x /blog/entrypoint.sh && rm -f /etc/nginx/conf.d/default.conf
 ENTRYPOINT ["/blog/entrypoint.sh"]
+CMD ["nginx", "-g", "daemon off;"]
 
 EXPOSE 80
