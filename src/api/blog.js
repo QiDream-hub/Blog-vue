@@ -7,9 +7,70 @@
 import { getImageUrl } from '@/config/blog'
 import {
   getBlogInfoPtr,
-  batchOperations,
-  getSet
+  batchGet,
+  getObject,
+  getSet,
+  buildQueryPath
 } from '@/api/lmjweb'
+
+/**
+ * 读取集合；空态（无内容，404）按空集合处理
+ * @param {string} ptr
+ * @returns {Promise<{elements: Array<{value: string, type: string}>} | null>}
+ */
+async function getSetOrNull(ptr) {
+  if (!ptr) return null
+  try {
+    return await getSet(ptr)
+  } catch (err) {
+    if (err.status === 404) return null
+    throw err
+  }
+}
+
+/**
+ * 从对象成员列表中取值
+ * @param {{members: Array<{name: string, value: string}>}} obj
+ * @param {string} name
+ * @returns {string}
+ */
+function memberValue(obj, name) {
+  return obj.members.find(m => m.name === name)?.value ?? ''
+}
+
+/**
+ * 批量失败时构造错误
+ * @param {{details?: {error?: string}}} result
+ * @param {string} fallback
+ * @returns {Error}
+ */
+function batchError(result, fallback) {
+  return new Error(result.details?.error || fallback)
+}
+
+/**
+ * 批量读取对象；批量接口全有或全无，失败时退化为逐个读取
+ * @param {string[]} ptrs
+ * @returns {Promise<Array<{status: number, body: any}>>}
+ */
+async function getObjectsSettled(ptrs) {
+  if (ptrs.length === 0) return []
+
+  const result = await batchGet(
+    ptrs.map(ptr => ({ method: 'GET', path: `/obj/${ptr}` }))
+  )
+  if (result.success) return result.results
+
+  return Promise.all(
+    ptrs.map(async ptr => {
+      try {
+        return { status: 200, body: await getObject(ptr) }
+      } catch (err) {
+        return { status: err.status ?? 0, body: null }
+      }
+    })
+  )
+}
 
 // ==================== 获取博客信息 ====================
 
@@ -19,24 +80,30 @@ import {
 export async function getBlogInfo() {
   const blogInfoPtr = getBlogInfoPtr()
 
-  const operations = [
-    { method: 'GET', path: `/obj/query/${encodeURIComponent(`${blogInfoPtr}.title`)}` },
-    { method: 'GET', path: `/obj/query/${encodeURIComponent(`${blogInfoPtr}.posts`)}` },
-    { method: 'GET', path: `/obj/query/${encodeURIComponent(`${blogInfoPtr}.tags`)}` }
-  ]
+  const operations = ['title', 'posts', 'tags'].map(member => ({
+    method: 'GET',
+    path: `/obj/query?path=${buildQueryPath(blogInfoPtr, member)}`
+  }))
 
-  const results = await batchOperations(operations)
+  const results = await batchGet(operations)
+  if (!results.success) {
+    throw batchError(results, 'Failed to get blog info')
+  }
+
+  const valueOf = index =>
+    results.results[index].status === 200 ? results.results[index].body.value : ''
 
   return {
     ptr: blogInfoPtr,
-    title: results.results[0].status === 200 ? results.results[0].body.value : '',
-    postsPtr: results.results[1].status === 200 ? results.results[1].body.value : '',
-    tagsPtr: results.results[2].status === 200 ? results.results[2].body.value : ''
+    title: valueOf(0),
+    postsPtr: valueOf(1),
+    tagsPtr: valueOf(2)
   }
 }
 
 /**
  * 获取所有文章指针
+ * 集合元素引用对象的读类型为 `object`
  */
 export async function getAllPostPtrs(postsPtr) {
   if (!postsPtr || postsPtr.length !== 34) {
@@ -44,9 +111,11 @@ export async function getAllPostPtrs(postsPtr) {
     return []
   }
 
-  const set = await getSet(postsPtr)
+  const set = await getSetOrNull(postsPtr)
+  if (!set) return []
+
   return set.elements
-    .filter(el => el.type === 'ref')
+    .filter(el => el.type === 'object')
     .map(el => el.value)
 }
 
@@ -56,100 +125,69 @@ export async function getAllPostPtrs(postsPtr) {
  * @returns {Promise<{ptr: string, title: string, cover: string, tags: string[]}>}
  */
 export async function getPostDetail(ptr) {
-  const operations = [
-    { method: 'GET', path: `/obj/query/${encodeURIComponent(`${ptr}.title`)}` },
-    { method: 'GET', path: `/obj/query/${encodeURIComponent(`${ptr}.cover`)}` },
-    { method: 'GET', path: `/obj/query/${encodeURIComponent(`${ptr}.tags`)}` }
-  ]
+  const post = await getObject(ptr)
 
-  const results = await batchOperations(operations)
+  const tagsPtr = memberValue(post, 'tags')
+  const tags = []
+  const tagsSet = await getSetOrNull(tagsPtr)
+  if (tagsSet) {
+    tags.push(...tagsSet.elements.filter(el => el.type === 'raw').map(el => el.value))
+  }
 
-  const tagsPtr = results.results[2].status === 200 ? results.results[2].body.value : null
-
-  const result = {
+  return {
     ptr,
-    title: results.results[0].status === 200 ? results.results[0].body.value : '',
-    cover: results.results[1].status === 200 ? results.results[1].body.value : '',
-    tags: []
+    title: memberValue(post, 'title'),
+    cover: memberValue(post, 'cover'),
+    tags
   }
-
-  if (tagsPtr) {
-    const tagsSet = await getSet(tagsPtr)
-    result.tags = tagsSet.elements
-      .filter(el => el.type === 'raw')
-      .map(el => el.value)
-  }
-
-  return result
 }
 
 /**
  * 批量获取所有文章详情
+ *
+ * 批量接口全有或全无，因此只批量读取文章对象；
+ * 可选的标签集合再逐个读取，空态集合按无标签处理。
  */
 export async function batchGetPosts(postPtrs) {
   if (postPtrs.length === 0) return []
 
-  const metaOperations = postPtrs.flatMap(ptr => [
-    { method: 'GET', path: `/obj/query/${encodeURIComponent(`${ptr}.title`)}` },
-    { method: 'GET', path: `/obj/query/${encodeURIComponent(`${ptr}.cover`)}` },
-    { method: 'GET', path: `/obj/query/${encodeURIComponent(`${ptr}.tags`)}` }
-  ])
-
-  const metaResults = await batchOperations(metaOperations)
-  if (!metaResults.success) {
-    throw new Error('Failed to batch get posts')
-  }
+  const metaResults = await getObjectsSettled(postPtrs)
 
   const postDetails = []
-  const tagSetPtrs = []
+  const tagSetReads = []
 
-  for (let i = 0; i < postPtrs.length; i++) {
-    const baseIdx = i * 3
-    const titleResult = metaResults.results[baseIdx]
-    const coverResult = metaResults.results[baseIdx + 1]
-    const tagsResult = metaResults.results[baseIdx + 2]
-
-    if (titleResult.status !== 200) {
+  metaResults.forEach((result, index) => {
+    if (result.status !== 200 || !result.body?.members) {
       postDetails.push(null)
-      continue
+      return
     }
 
+    const post = result.body
     const detail = {
-      ptr: postPtrs[i],
-      title: titleResult.body.value,
-      cover: coverResult.status === 200 ? coverResult.body.value : '',
+      ptr: postPtrs[index],
+      title: memberValue(post, 'title'),
+      cover: memberValue(post, 'cover'),
       tags: []
     }
 
-    if (tagsResult.status === 200 && tagsResult.body.value) {
-      tagSetPtrs.push({ idx: i, tagsPtr: tagsResult.body.value })
+    const tagsPtr = memberValue(post, 'tags')
+    if (tagsPtr) {
+      tagSetReads.push({ detail, tagsPtr })
     }
 
     postDetails.push(detail)
-  }
+  })
 
-  if (tagSetPtrs.length > 0) {
-    const tagOperations = tagSetPtrs.map(t => ({
-      method: 'GET',
-      path: `/set/${t.tagsPtr}`
-    }))
-    const tagResults = await batchOperations(tagOperations)
-
-    if (tagResults.success) {
-      postDetails.forEach((detail, detailIdx) => {
-        if (!detail) return
-        const tagSetInfo = tagSetPtrs.find(t => t.idx === detailIdx)
-        if (tagSetInfo) {
-          const tagResult = tagResults.results[tagSetPtrs.indexOf(tagSetInfo)]
-          if (tagResult.status === 200) {
-            detail.tags = tagResult.body.elements
-              .filter(el => el.type === 'raw')
-              .map(el => el.value)
-          }
-        }
-      })
-    }
-  }
+  await Promise.all(
+    tagSetReads.map(async ({ detail, tagsPtr }) => {
+      const tagsSet = await getSetOrNull(tagsPtr)
+      if (tagsSet) {
+        detail.tags = tagsSet.elements
+          .filter(el => el.type === 'raw')
+          .map(el => el.value)
+      }
+    })
+  )
 
   return postDetails
 }
@@ -158,56 +196,38 @@ export async function batchGetPosts(postPtrs) {
  * 批量获取所有标签及其文章数量
  */
 export async function batchGetTagsWithCount(tagsPtr) {
-  const set = await getSet(tagsPtr)
+  const set = await getSetOrNull(tagsPtr)
+  if (!set) return []
+
   const tagPtrs = set.elements
-    .filter(el => el.type === 'ref')
+    .filter(el => el.type === 'object')
     .map(el => el.value)
 
   if (tagPtrs.length === 0) return []
 
-  const operations = tagPtrs.flatMap(ptr => [
-    { method: 'GET', path: `/obj/${ptr}/name` },
-    { method: 'GET', path: `/obj/${ptr}/posts` }
-  ])
-
-  const results = await batchOperations(operations)
-  if (!results.success) {
-    throw new Error('Failed to batch get tags')
-  }
+  const results = await getObjectsSettled(tagPtrs)
 
   const tagInfos = []
-  const postsSetPtrs = []
 
-  for (let i = 0; i < tagPtrs.length; i++) {
-    const nameResult = results.results[i * 2]
-    const postsResult = results.results[i * 2 + 1]
+  results.forEach((result, index) => {
+    if (result.status !== 200 || !result.body?.members) return
 
-    const tagInfo = {
-      ptr: tagPtrs[i],
-      name: nameResult.status === 200 ? nameResult.body.value : '',
-      postsPtr: postsResult.status === 200 ? postsResult.body.value : ''
-    }
-    tagInfos.push(tagInfo)
-    if (tagInfo.postsPtr) postsSetPtrs.push(tagInfo.postsPtr)
-  }
+    tagInfos.push({
+      ptr: tagPtrs[index],
+      name: memberValue(result.body, 'name'),
+      postsPtr: memberValue(result.body, 'posts'),
+      count: 0
+    })
+  })
 
-  if (postsSetPtrs.length > 0) {
-    const countOperations = postsSetPtrs.map(ptr => ({
-      method: 'GET',
-      path: `/set/${ptr}`
-    }))
-    const countResults = await batchOperations(countOperations)
-
-    if (countResults.success) {
-      let countIdx = 0
-      tagInfos.forEach(tagInfo => {
-        const countResult = countResults.results[countIdx++]
-        tagInfo.count = countResult.status === 200
-          ? countResult.body.elements.length
-          : 0
-      })
-    }
-  }
+  await Promise.all(
+    tagInfos.map(async tagInfo => {
+      const postsSet = await getSetOrNull(tagInfo.postsPtr)
+      if (postsSet) {
+        tagInfo.count = postsSet.elements.length
+      }
+    })
+  )
 
   return tagInfos
 }

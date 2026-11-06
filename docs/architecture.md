@@ -21,7 +21,7 @@ flowchart TB
         
         subgraph FileSystem["文件系统"]
             Images[图片目录<br/>/path/to/images/<br/>- 01img001...<br/>- 01img002...]
-            Articles[文章目录<br/>/path/to/articles/<br/>- 01art001... .md<br/>- 01art002... .md]
+            Articles[文章目录<br/>/path/to/articles/<br/>- 01art001...<br/>- 01art002...]
         end
     end
 

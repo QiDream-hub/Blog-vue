@@ -20,8 +20,8 @@
 |------|------|
 | **RESTful API** | 提供标准的 REST 风格接口 |
 | **事务管理** | 请求级自动事务，支持超时控制 |
-| **链式查询** | 支持嵌套路径解析查询 |
-| **自动类型识别** | 智能识别指针引用、原始数据、空值 |
+| **链式查询** | 深度访问嵌套路径（配合批量接口做多路径整合） |
+| **显式值类型** | 写入用 `type` 声明 `raw`/`ref`/`null`；读取区分 `raw`/`null`/`object`/`set` |
 | **集合支持** | 支持无序集合的 CRUD 操作 |
 | **高性能 HTTP 解析** | 基于 llhttp 实现，100% RFC 7230 兼容 |
 
@@ -31,44 +31,41 @@
 
 ### 2.1 系统架构图
 
-```
-┌─────────────────────────────────────────────────────────┐
-│                    HTTP Client                          │
-└─────────────────────────────────────────────────────────┘
-                           │
-                           ▼
-┌─────────────────────────────────────────────────────────┐
-│                   HTTP Server Layer                     │
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────────┐ │
-│  │http_parser  │  │   routes    │  │http_server      │ │
-│  │(解析请求)   │  │(路由分发)   │  │(监听/响应)      │ │
-│  └─────────────┘  └─────────────┘  └─────────────────┘ │
-└─────────────────────────────────────────────────────────┘
-                           │
-                           ▼
-┌─────────────────────────────────────────────────────────┐
-│                 Handler Layer                           │
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────────┐ │
-│  │obj_handle   │  │set_handle   │  │utils_handle     │ │
-│  │(对象操作)   │  │(集合操作)   │  │(工具接口)       │ │
-│  └─────────────┘  └─────────────┘  └─────────────────┘ │
-│  ┌─────────────────────────────────────────────────────┐│
-│  │              handle_utils (通用工具)                ││
-│  │  [指针转换] [路径解析] [值编解码] [响应构建]        ││
-│  └─────────────────────────────────────────────────────┘│
-└─────────────────────────────────────────────────────────┘
-                           │
-                           ▼
-┌─────────────────────────────────────────────────────────┐
-│                      LMJCore                            │
-│                 (核心存储引擎)                           │
-└─────────────────────────────────────────────────────────┘
-                           │
-                           ▼
-┌─────────────────────────────────────────────────────────┐
-│                      LMDB                               │
-│                 (底层存储引擎)                           │
-└─────────────────────────────────────────────────────────┘
+```mermaid
+flowchart TD
+    Client["HTTP Client"]
+
+    subgraph HTTP_Server_Layer ["HTTP Server Layer"]
+        Parser["http_parser<br/>(解析请求)"]
+        Routes["routes<br/>(路由分发)"]
+        Server["http_server<br/>(监听/响应)"]
+    end
+
+    subgraph Handler_Layer ["Handler Layer"]
+        ObjHandle["obj_handle<br/>(对象操作)"]
+        SetHandle["set_handle<br/>(集合操作)"]
+        UtilsHandle["utils_handle<br/>(工具接口)"]
+        
+        subgraph Handle_Utils ["handle_utils (通用工具)"]
+            Utils["[指针转换] [路径解析]<br/>[值编解码] [响应构建]"]
+        end
+    end
+
+    LMJCore["LMJCore<br/>(核心存储引擎)"]
+    LMDB["LMDB<br/>(底层存储引擎)"]
+
+    Client --> Server
+    Parser --> Routes
+    Routes --> Server
+
+    Server --> Handler_Layer
+
+    ObjHandle --> Handle_Utils
+    SetHandle --> Handle_Utils
+    UtilsHandle --> Handle_Utils
+
+    Handle_Utils --> LMJCore
+    LMJCore --> LMDB
 ```
 
 ### 2.2 模块分层
@@ -146,10 +143,11 @@ include/
 
 | 函数 | HTTP 方法 | 路径 | 说明 |
 |------|-----------|------|------|
-| `handle_obj_create` | POST | `/obj` | 创建空对象 |
+| `handle_obj_create` | POST | `/obj` | 分配对象指针（空态，不写存储） |
+| `handle_obj_init` | POST | `/obj/init` | 分配指针并在同一事务内填充成员（支持嵌套） |
 | `handle_obj_get` | GET | `/obj/{ptr}` | 获取完整对象 |
 | `handle_obj_member_get` | GET | `/obj/{ptr}/{member}` | 获取成员值 |
-| `handle_obj_member_put` | PUT | `/obj/{ptr}/{member}` | 设置成员值 |
+| `handle_obj_member_put` | PUT | `/obj/{ptr}/{member}` | 设置成员值（空态指针首次写入即实化） |
 | `handle_obj_member_del` | DELETE | `/obj/{ptr}/{member}` | 删除成员 |
 | `handle_obj_del` | DELETE | `/obj/{ptr}` | 删除完整对象 |
 | `handle_obj_query` | GET | `/obj/query?path=...` | 链式查询 |
@@ -158,7 +156,8 @@ include/
 
 | 函数 | HTTP 方法 | 路径 | 说明 |
 |------|-----------|------|------|
-| `handle_set_create` | POST | `/set` | 创建空集合 |
+| `handle_set_create` | POST | `/set` | 分配集合指针（空态，不写存储） |
+| `handle_set_init` | POST | `/set/init` | 分配指针并在同一事务内填充元素（支持嵌套） |
 | `handle_set_get` | GET | `/set/{ptr}` | 获取完整集合 |
 | `handle_set_add` | POST | `/set/{ptr}/elements` | 添加元素 |
 | `handle_set_remove` | DELETE | `/set/{ptr}/elements` | 删除元素 |
@@ -168,7 +167,7 @@ include/
 
 | 函数 | HTTP 方法 | 路径 | 说明 |
 |------|-----------|------|------|
-| `handle_ptr_exist` | GET | `/ptr/{ptr}/exist` | 检查指针是否存在 |
+| `handle_ptr_exist` | GET | `/ptr/{ptr}/exist` | 检查指针是否已实化 |
 | `handle_health` | GET | `/health` | 健康检查 |
 
 #### 3.3.4 通用工具 (`handle_utils.c`)
@@ -176,45 +175,27 @@ include/
 | 函数 | 说明 |
 |------|------|
 | `route_params_get` | 从路由参数中获取指定索引的参数 |
-| `json_get_string` | 从 JSON 对象中提取字符串值 |
 | `lmjcore_ptr_from_hex` | 十六进制字符串 → 二进制指针 |
 | `lmjcore_ptr_to_hex` | 二进制指针 → 十六进制字符串 |
-| `lmjcore_parse_query_path` | 解析链式查询路径 |
-| `lmjcore_encode_value` | 编码值为存储格式 |
-| `lmjcore_decode_value` | 解码存储格式的值 |
+| `encode_type_from_string` | 请求 `type` 字符串（`raw`/`ref`/`null`）→ 存储标签 |
+| `handle_parse_typed_value` | 从请求体解析 `{value, type}` |
+| `lmjcore_obj_member_get_capped` | 读取成员值（按需增长，受上限约束） |
+| `value_type_to_string` | API 值类型 → 类型字符串 |
+| `lmjcore_encode_value` | 按指定存储标签编码值 |
+| `lmjcore_decode_value` | 解码存储格式的值为 API 类型 |
 
 ---
 
-## 4. 数据存储设计
+## 4. 数据存储（概述）
 
-### 4.1 指针存储格式
+存储模型、指针状态、类型表示等概念细节统一见 [CONCEPTS.md](./CONCEPTS.md)；本节只保留架构相关要点：
 
-所有值统一添加 1 字节类型标记：
+- **两个 LMDB 数据库**：`set`（成员名/元素列表，`MDB_DUPSORT`，按字典序）与 `main`（成员值，Key = 指针 + 成员名，点查 O(1)）。
+- **指针**：17 字节，首字节标识对象（`01`）/集合（`02`）；`set` 中有 Key = 已实化，无 Key = 空态（默认态），空态指针仍然有效。
+- **值编码**：落库首字节为存储标签（`RAW`/`PTR`/`NULL`），对外映射为 `raw`/`object`/`set`/`null`。
+- **链式查询**：路径 `<指针>.<成员名>[.<成员名>...]`，详见 [QUERY_DESIGN.md](./QUERY_DESIGN.md)。
 
-```
-┌──────────────────────────────────────────┐
-│ 原始数据：  [0x00][data...]              │
-│ 指针引用：  [0x01][17B 指针]             │
-│ 空值：      [0x02]                       │
-└──────────────────────────────────────────┘
-```
-
-### 4.2 指针表示
-
-- **格式**: 34 位十六进制字符串
-- **类型前缀**: 
-  - `01` = 对象 (LMJCORE_OBJ)
-  - `02` = 集合 (LMJCORE_SET)
-- **示例**: `01abc123def456789012345678901234`
-
-### 4.3 链式查询路径
-
-```
-格式：<指针>.<member1>.<member2>.<member3>
-
-示例：01abc123.user.profile.name
-URL:  GET /obj/query?path=01abc123.user.profile.name
-```
+详细的存储示例、类型映射与空态规则见 [CONCEPTS.md - 存储模型](./CONCEPTS.md#4-存储模型) 与 [CONCEPTS.md - 指针状态](./CONCEPTS.md#5-指针状态空态与实化)。
 
 ---
 
@@ -229,7 +210,7 @@ URL:  GET /obj/query?path=01abc123.user.profile.name
 RETURN_ERROR_INVALID_PARAM(response);      // 参数无效
 RETURN_ERROR_MISSING_PARAM("ptr", response); // 缺少参数
 RETURN_ERROR_INVALID_PTR(response);        // 指针格式无效
-RETURN_ERROR_NOT_FOUND("Object", response); // 实体不存在
+RETURN_ERROR_NOT_FOUND("Object", response); // 空态 / 无内容
 RETURN_ERROR_NO_MEMORY(response);          // 内存分配失败
 RETURN_ERROR_TXN_FAILED("begin", response); // 事务错误
 RETURN_ERROR_BODY_PARSE(response);         // 请求体解析失败
@@ -240,7 +221,7 @@ RETURN_ERROR_BODY_PARSE(response);         // 请求体解析失败
 | LMJCore 错误码 | HTTP 状态码 | 说明 |
 |----------------|-------------|------|
 | `LMJCORE_SUCCESS` | 200 | 成功 |
-| `LMJCORE_ERROR_ENTITY_NOT_FOUND` | 404 | 实体不存在 |
+| `LMJCORE_ERROR_ENTITY_NOT_FOUND` | 404 | 实体处于空态（无内容或不存在） |
 | `LMJCORE_ERROR_MEMBER_NOT_FOUND` | 404 | 成员不存在 |
 | `LMJCORE_ERROR_INVALID_PARAM` | 400 | 参数无效 |
 | `LMJCORE_ERROR_PATH_PARSE` | 400 | 路径解析错误 |
@@ -271,6 +252,7 @@ RETURN_ERROR_BODY_PARSE(response);         // 请求体解析失败
 - **自动管理**: 每个 HTTP 请求自动开启/提交/回滚事务
 - **超时控制**: 默认 5 秒超时，返回 408 错误
 - **链式查询**: 多次解析在同一事务内完成
+- **指针分配**: `POST /obj`、`POST /set` 以及 `init` 的嵌套节点分配指针时**不进入事务**，避免无谓占用单写者锁；指针分配本身不产生存储写入
 
 ### 6.2 事务流程
 
@@ -278,10 +260,13 @@ RETURN_ERROR_BODY_PARSE(response);         // 请求体解析失败
 请求到达
     │
     ▼
+分配指针（POST /obj、POST /set、init 的根/嵌套节点；无需事务）
+    │
+    ▼
 开启事务 (lmjcore_txn_begin)
     │
     ▼
-执行业务逻辑
+执行业务逻辑（首次写入即实化）
     │
     ├── 成功 → 提交事务 (lmjcore_txn_commit)
     │
@@ -318,7 +303,6 @@ LMJCore-Web 支持三种配置方式，优先级从高到低为：
 | `--max-connections <n>` | `-c` | 最大连接数 | `128` |
 | `--txn-timeout <sec>` | `-t` | 事务超时 (秒) | `5` |
 | `--config <file>` | `-C` | 配置文件路径 | `lmjcore.conf` |
-| `--daemon` | `-D` | 守护进程模式 | `false` |
 | `--log-level <0-3>` | `-l` | 日志级别 (0=DEBUG, 3=ERROR) | `1` |
 | `--help` | `-h` | 显示帮助信息 | - |
 
@@ -331,8 +315,8 @@ LMJCore-Web 支持三种配置方式，优先级从高到低为：
 # 指定端口和数据库路径
 ./lmjcore_server -p 9000 -d /data/lmjcore
 
-# 使用配置文件并以后台模式运行
-./lmjcore_server -C /etc/lmjcore.conf --daemon
+# 使用配置文件
+./lmjcore_server -C /etc/lmjcore.conf
 
 # 调试模式（显示详细配置）
 ./lmjcore_server -l 0
@@ -380,11 +364,8 @@ max_connections = 128
 txn_timeout = 5
 
 # ----------------------------
-# 运行模式配置
+# 日志配置
 # ----------------------------
-
-# 是否以守护进程模式运行 (默认：false)
-daemon = false
 
 # 日志级别 (0=DEBUG, 1=INFO, 2=WARN, 3=ERROR)
 log_level = 1
@@ -542,14 +523,6 @@ sudo systemctl start lmjcore
 sudo systemctl status lmjcore
 ```
 
-### 10.2 守护进程模式
-
-也可直接使用内置的守护进程模式：
-
-```bash
-./lmjcore_server --config /etc/lmjcore.conf --daemon
-```
-
 ### 10.3 日志管理
 
 LMJCore-Web 内置了统一的日志系统，支持级别控制和彩色输出。
@@ -594,7 +567,6 @@ log_level = 1  # 在 lmjcore.conf 中
 
 - 自动彩色输出（终端模式下）
 - 警告和错误自动输出到 stderr
-- 守护进程模式自动禁用颜色
 - 线程安全的日志输出
 
 ---
@@ -617,10 +589,10 @@ log_level = 1  # 在 lmjcore.conf 中
 |------|------|------|
 | 对象 CRUD | ✅ 已完成 | 创建、读取、更新、删除对象 |
 | 集合 CRUD | ✅ 已完成 | 创建、读取、添加/删除元素 |
-| 链式查询 | ✅ 已完成 | 通过 `/obj/query?path=` 实现嵌套路径解析 |
+| 链式查询 | ✅ 已完成 | `/obj/query?path=` 深度访问（只读、单值、O(深度)），多路径由 `/batch` 整合 |
 | 批量操作 | ✅ 已完成 | 单事务内执行多个操作，支持只读模式 |
 | 健康检查 | ✅ 已完成 | `/health` 端点 |
-| 指针验证 | ✅ 已完成 | `/ptr/{ptr}/exist` 端点 |
+| 指针状态查询 | ✅ 已完成 | `/ptr/{ptr}/exist` 判断指针是否已实化 |
 
 ### 12.2 未来扩展
 
@@ -695,7 +667,10 @@ lmjcore-web/
 ├── doc/                    # 详细设计文档
 │   └── lmjcore-web/
 │       ├── lmjcore_web.md      # 架构设计文档
-│       └── API_REFERENCE.md    # API 参考文档
+│       ├── API_REFERENCE.md    # API 契约文档
+│       ├── CONCEPTS.md         # 概念与存储模型
+│       ├── QUERY_DESIGN.md     # 链式查询设计
+│       └── BATCH_DESIGN.md     # 批量操作设计
 ├── include/                # 公共头文件
 │   ├── config.h            # 配置管理接口
 │   ├── error_codes.h       # 错误码定义与 HTTP 映射
@@ -727,4 +702,16 @@ lmjcore-web/
 
 ## 15. 参考文档
 
-- [API 参考文档](./API_REFERENCE.md) - 完整 API 文档
+### 项目文档
+
+- [API 参考文档](./API_REFERENCE.md) - 端点、请求/响应与错误码
+- [概念与存储模型](./CONCEPTS.md) - 指针、空态与实化、类型系统与存储模型
+- [链式查询设计](./QUERY_DESIGN.md) - 深度访问的路径语法与错误模型
+- [批量操作设计](./BATCH_DESIGN.md) - 事务模型、vars 替换与原子性
+
+### LMJCore 核心文档
+
+- [LMJCore 概念指南](../../thirdparty/LMJCore/doc/core/LMJCore 概念指南.md) - 核心思想和设计理念
+- [LMJCore 核心存储模型](../../thirdparty/LMJCore/doc/core/LMJCore 核心存储模型.md) - set 和 main 数据库详解
+- [LMJCore 核心设计定义](../../thirdparty/LMJCore/doc/core/LMJCore 核心设计定义.md) - 数据格式与行为契约
+- [LMJCore 事务模型](../../thirdparty/LMJCore/doc/core/LMJCore 事务模型.md) - MVCC 与 ACID 语义
